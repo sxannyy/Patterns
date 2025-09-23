@@ -38,10 +38,15 @@ class SettingsManager:
     
     def convert_to_settings(self) -> bool:
         fields = ["name", "type_of_property", "inn", "bank_account", "correspondent_account", "bik"]
-        if not all(field in self.__load_result for field in fields):
-            return False
-        for field in fields:
-            setattr(self.__settings.company, field, self.__load_result[field])
+        for i in fields:
+            if i not in self.__load_result.keys():
+                return False
+        self.__settings.company.name = self.__load_result['name']
+        self.__settings.company.type_of_property = self.__load_result["type_of_property"]
+        self.__settings.company.inn = self.__load_result['inn']
+        self.__settings.company.bank_account = self.__load_result['bank_account']
+        self.__settings.company.correspondent_account = self.__load_result['correspondent_account']
+        self.__settings.company.bik = self.__load_result['bik']
         return True
 
     def load_settings(self) -> bool:

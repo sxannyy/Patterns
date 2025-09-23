@@ -43,8 +43,8 @@ class TestModels(unittest.TestCase):
         sm2.load_settings()
         model2 = sm2.company_settings()
 
-        self.assertEqual(model1.name, "TechnoRus")
-        self.assertEqual(model2.name, "BetaSoft")
+        self.assertEqual(model1.name, "TechData")
+        self.assertEqual(model2.name, "PieceofInfo")
         self.assertEqual(model1.inn, 123456789012)
         self.assertEqual(model2.bik, 123123123)
 
