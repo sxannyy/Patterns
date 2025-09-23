@@ -27,8 +27,9 @@ class SettingsManager:
         value = value.strip()
         if value == "":
             return
-        if os.path.exists(value):
-            self.__config_namefile = value
+        abs_path = os.path.abspath(value)
+        if os.path.exists(abs_path):
+            self.__config_namefile = abs_path
 
     def settings(self)-> Settings:
         return self.__settings

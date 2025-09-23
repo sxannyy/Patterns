@@ -17,13 +17,13 @@ class TestModels(unittest.TestCase):
         self.assertEqual(model.name, "test")
 
     def test_load_createmodel_companymodel(self):
-        filename = os.path.join(BASE, 'settings.json')
+        filename = os.path.join('settings.json')
         sm = SettingsManager(filename)
         result = sm.load_settings()
         self.assertTrue(result)
 
     def test_compare_createmodel_companymodel(self):
-        filename = os.path.join(BASE, "settings.json")
+        filename = os.path.join("..\settings.json")
         sm1 = SettingsManager(filename)
         sm2 = SettingsManager(filename)
         sm1.load_settings()
@@ -47,6 +47,26 @@ class TestModels(unittest.TestCase):
         self.assertEqual(model2.name, "PieceofInfo")
         self.assertEqual(model1.inn, 123456789012)
         self.assertEqual(model2.bik, 123123123)
+    
+    def test_relative_path(self):
+        filename1 = os.path.join("..\settings.json")
+        filename2 = os.path.join("settings.json")
+        sm1 = SettingsManager(filename1)
+        sm2 = SettingsManager(filename2)
+        res1 = sm1.load_settings()
+        res2 = sm2.load_settings()
+        model1 = sm1.company_settings()
+        model2 = sm2.company_settings()
+        self.assertEqual(model1, model2)
+        self.assertTrue(res1)
+        self.assertTrue(res2)
+
+    def test_absolute_path(self):
+        filename = os.path.join(BASE, "settings.json")
+        sm1 = SettingsManager(filename)
+        res = sm1.load_settings()
+        model1 = sm1.company_settings()
+        self.assertTrue(res)
 
 if __name__ == '__main__':
     unittest.main()
