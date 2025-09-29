@@ -9,8 +9,18 @@ class operation_exception(Exception):
 # Набор проверок данных
 class validator:
 
+    """
+    Сервис валидации входных данных.
+
+    Назначение:
+        - Проверка значений на тип, пустоту и максимальную длину.
+    Использование:
+        validator.validate(value, expected_type, max_len)
+    """
+
     @staticmethod
     def validate(value, type_, len_= None):
+        
         """
             Валидация аргумента по типу и длине
         Args:

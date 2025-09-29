@@ -7,6 +7,17 @@ from Src.Models.company_model import company_model
 import json, os
 
 class settings_manager:
+
+    """
+    Загрузчик и держатель конфигурации приложения.
+    Ответственность:
+        - Хранит путь к файлу конфигурации.
+        - Загружает JSON и мапит его в settings_model -> company_model.
+        - Предоставляет доступ к текущим настройкам.
+    Ограничения:
+        - При ошибках загрузки возвращает False, оставляя настройки по умолчанию.
+    """
+
     __config_namefile:str = ""
     __settings:settings_model = None
     __load_result:dict
@@ -34,12 +45,21 @@ class settings_manager:
             raise argument_exception(f'Не найден файл настроек {abs_path}')
 
     def settings(self)-> settings_model:
+        """ Возвращает текущие настройки приложения (объект settings_model) """
         return self.__settings
     
     def company_settings(self) -> company_model:
+        """ Удобный аксессор: возвращает settings.company """
         return self.__settings.company
     
     def convert_to_settings(self) -> bool:
+
+        """
+        Преобразует загруженный словарь в экземпляры доменных моделей.
+        Returns:
+            bool: True при успешном маппинге; False, если структура некорректна.
+        """
+
         fields = ["name", "type_of_property", "inn", "bank_account", "correspondent_account", "bik"]
         if not all(field in self.__load_result for field in fields):
             return False
@@ -48,6 +68,13 @@ class settings_manager:
         return True
 
     def load_settings(self) -> bool:
+
+        """
+        Загружает настройки из JSON-файла, обновляя внутреннее состояние.
+        Returns:
+            bool: True - если загрузка успешна и структура корректна, иначе False.
+        """
+
         if self.config_namefile.strip() == "":
             raise Exception("Не найден файл настроек!")
         try:
