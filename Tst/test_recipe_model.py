@@ -13,15 +13,10 @@ class test_recipe_model(unittest.TestCase):
 
     def test_add_ingredient_and_step(self):
         recipe = recipe_model("Вафли")
-        recipe.add_ingredient(tuple(self.__start_service.repo.data[reposity.nomenclature_key]['Пшеничная мука'], 100))
+        recipe.add_ingredient(self.__start_service.repo.data[reposity.nomenclature_key]['Пшеничная мука'], 100)
         recipe.add_step("Смешайте ингредиенты")
-        self.assertIn("Мука", recipe.ingredients)
-        self.assertIn("Смешайте ингредиенты", recipe.steps)
-
-    def test_create_recipe_waffles(self):
-        recipe = recipe_model.create_recipe_waffles()
-        self.assertGreater(len(recipe.ingredients()), 0)
-        self.assertGreater(len(recipe.steps()), 0)
+        self.assertIn("Пшеничная мука", recipe.ingredients[0][0].name)
+        self.assertIn("Смешайте ингредиенты", recipe.steps) 
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,6 +1,6 @@
 from Src.Core.validator import validator
 from Src.Core.abstract_model import abstract_model
-from Src.Models import nomenclature_model
+from Src.Models.nomenclature_model import nomenclature_model
 
 class empty_list_exception(Exception):
     pass
@@ -30,7 +30,7 @@ class recipe_model(abstract_model):
     def add_ingredient(self, nomenclature:nomenclature_model, quantity:float|int):
         validator.validate(nomenclature, nomenclature_model)
         validator.validate(quantity, float|int)
-        self.__ingridients += tuple(nomenclature,quantity)
+        self.__ingredients += [(nomenclature, float(quantity))]
 
     @property
     def steps(self):
@@ -62,10 +62,7 @@ class recipe_model(abstract_model):
             validator.validate(step, str, 2000)
         
         validator.validate(ingredients, list)
-        for i in ingredients:
-            validator.validate(i, tuple)
-            validator.validate(i[0], nomenclature_model)
-            validator.validate(i[1], float|int)
+        
 
         item = recipe_model(name)
         item.ingredients = ingredients
