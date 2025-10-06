@@ -1,8 +1,7 @@
 from Src.Core.abstract_model import abstract_model
+from Src.Core.validator import validator
 
-class nomenclature_group_model(abstract_model):
-    
-    """
+"""
     Доменная модель «Группа номенклатуры».
     Назначение:
         Используется для классификации номенклатуры (товаров, услуг) по группам и категориям.
@@ -11,6 +10,36 @@ class nomenclature_group_model(abstract_model):
         unique_code (str): Уникальный идентификатор группы (унаследовано).
     Особенности:
         - Может быть использована для построения иерархии категорий товаров.
-    """
+"""
 
-    pass
+class nomenclature_group_model(abstract_model):
+    _instances = {}
+
+    def __init__(self, name = ""):
+        super().__init__(name)
+
+    """ Универсальный метод - фабричный """
+    @staticmethod
+    def create(name:str):
+        validator.validate(name, str)
+        if name in nomenclature_group_model._instances.keys():
+            return nomenclature_group_model._instances[name]
+        item = nomenclature_group_model()
+        item.name = name
+        nomenclature_group_model._instances[name] = item
+        return item
+    
+    """ Специи и пряности """
+    @staticmethod
+    def create_spices_and_herbs():
+        return nomenclature_group_model.create("специи и пряности")
+    
+    """ Продукты животного происхождения """
+    @staticmethod
+    def create_animal_products():
+        return nomenclature_group_model.create("продукты животного происхождения")
+    
+    """ Мука и крупы """
+    @staticmethod
+    def create_flour_and_cereals():
+        return nomenclature_group_model.create("мука и крупы")

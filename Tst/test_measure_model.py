@@ -9,6 +9,7 @@ from Src.Models.measure_model import measure_model
     - изменение коэффициента преобразования
     - удаление базовой единицы измерения
     - проверка обработки ошибок
+    - проверка грамм-килограмм, литр-миллилитр, штука
 """
 
 class TestMeasureModel(unittest.TestCase):
@@ -36,6 +37,35 @@ class TestMeasureModel(unittest.TestCase):
 
         with self.assertRaises(Exception):
             pack.conversion_factor = "ten"
+    
+    def test_gramm_equal(self):
+        # Подготовка
+        kilo: measure_model = measure_model.create_kilogramm()
+        gram: measure_model = measure_model.create_gramm()
+
+        # Действие
+
+        # Проверка
+        self.assertEqual(kilo.base_measure, gram)
+
+    def test_milliliter_equal(self):
+        # Подготовка
+        liter: measure_model = measure_model.create_liter()
+        milli: measure_model = measure_model.create_milliliter()
+
+        # Действие
+
+        # Проверка
+        self.assertEqual(liter, milli.base_measure)
+
+    def test_piece_create(self):
+        # Подготовка
+        thing: measure_model = measure_model.create_piece()
+
+        # Действие
+
+        # Проверка
+        self.assertEqual(thing, measure_model.create_piece())
 
 if __name__ == '__main__':
     unittest.main()
