@@ -8,6 +8,12 @@ from Src.Core.validator import argument_exception
     Свойства:
         base_measure (measure_model|None): Базовая единица (например, штука).
         conversion_factor (int): Коэффициент пересчёта к базовой единице.
+    Статические методы:
+        Грамм - начальный метод (name: грамм, measure_model: None, conversion_factor: 1)
+        Килограмм - основывается на методе грамм (name: килограмм, measure_model: gramm, conversion_factor: 1000)
+        Штука - начальный метод (name: штука, measure_model: None, conversion_factor: 1)
+        Литр - начальный метод (name: литр, measure_model: None, conversion_factor: 1)
+        Миллилитр - основывается на методе литр (name: миллилитр, measure_model: liter, conversion_factor: 0.001)
     Примеры:
         - 'упаковка' с conversion_factor=10 и base_measure='шт'.
 """
@@ -51,7 +57,7 @@ class measure_model(abstract_model):
             raise argument_exception("Некорректный аргумент!")
         self.__conversion_factor = conversion_factor
 
-    """ Универсальный метод - фабричный """
+    """ Универсальный метод - фабричный. Упрощает переиспользование и использование распространенных единиц измерения """
     @staticmethod
     def create(name:str, base_measure: 'measure_model' = None, conversion_factor: float|int = 1.0):
         validator.validate(name, str)
@@ -94,3 +100,4 @@ class measure_model(abstract_model):
     def create_milliliter():
         inner_liter = measure_model.create_liter()
         return measure_model.create("миллилитер", inner_liter, 0.001)
+    

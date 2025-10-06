@@ -2,6 +2,34 @@ from Src.Core.validator import validator
 from Src.Core.abstract_model import abstract_model
 from Src.Models.nomenclature_model import nomenclature_model
 
+"""
+    Класс, представляющий модель рецепта.
+
+    Модель рецепта содержит информацию об ингредиентах и шагах приготовления. 
+    Она предоставляет методы для добавления ингредиентов и шагов, а также 
+    статический метод для создания экземпляров рецепта.
+
+    Атрибуты:
+        ingredients (list): Список ингредиентов, каждый из которых представлен 
+                            в виде кортежа (nomenclature_model, quantity).
+        steps (list): Список шагов приготовления рецепта.
+
+    Исключения:
+        empty_list_exception: Исключение, возникающее при попытке установить пустой 
+                              список шагов или при создании рецепта с пустым списком шагов.
+
+    Методы:
+        add_ingredient(nomenclature:nomenclature_model, quantity:float|int):
+            Добавляет ингредиент в рецепт.
+        
+        add_step(step:str):
+            Добавляет шаг приготовления в рецепт.
+        
+        create(name:str, steps:list, ingredients:list):
+            Создает новый экземпляр рецепта или возвращает существующий, 
+            если рецепт с таким именем уже был создан.
+    """
+
 class empty_list_exception(Exception):
     pass
 
@@ -19,7 +47,7 @@ class recipe_model(abstract_model):
         
     @ingredients.setter
     def ingredients(self, ingredients:list):
-        """  Ингридиенты """
+        """  Ингредиенты """
         validator.validate(ingredients, list)
         for i in ingredients:
             validator.validate(i, tuple)

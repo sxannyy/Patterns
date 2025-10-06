@@ -1,6 +1,11 @@
 import unittest
 from Src.Models.nomenclature_group_model import nomenclature_group_model
 
+"""
+    Проверяет создание группы 'специи и пряности'.
+    Проверяет, что название группы содержит строку 'специи и пряности'.
+"""
+
 class TestNomenclatureGroupModel(unittest.TestCase):
     def test_create_spices_and_herbs(self):
         group = nomenclature_group_model.create_spices_and_herbs()

@@ -4,7 +4,12 @@ from Src.start_service import start_service
 from Src.Models.nomenclature_model import nomenclature_model
 from Src.Models.recipe_model import recipe_model
 
-class test_recipe_model(unittest.TestCase):
+"""
+    Проверяет добавление ингредиента и шага в рецепт.
+    Проверяет, что ингредиент был успешно добавлен в рецепт, а также что шаг приготовления был добавлен правильно.
+"""
+
+class TestRecipeModel(unittest.TestCase):
     __start_service = start_service()
 
     def __init__(self, methodName = "runTest"):

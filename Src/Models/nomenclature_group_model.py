@@ -10,6 +10,10 @@ from Src.Core.validator import validator
         unique_code (str): Уникальный идентификатор группы (унаследовано).
     Особенности:
         - Может быть использована для построения иерархии категорий товаров.
+    Статические методы (группы, встречающиеся часто):
+        Специи и пряности
+        Продукты животного происхождения
+        Мука и крупы
 """
 
 class nomenclature_group_model(abstract_model):
@@ -18,7 +22,7 @@ class nomenclature_group_model(abstract_model):
     def __init__(self, name = ""):
         super().__init__(name)
 
-    """ Универсальный метод - фабричный """
+    """ Универсальный метод - фабричный. Упрощает переиспользование и использование распространенных групп ном-уры """
     @staticmethod
     def create(name:str):
         validator.validate(name, str)
