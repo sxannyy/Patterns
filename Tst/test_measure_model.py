@@ -15,8 +15,8 @@ from Src.Models.measure_model import measure_model
 class TestMeasureModel(unittest.TestCase):
     def test_measure_model_basic_and_derived(self):
         # Подготовка
-        piece = measure_model("шт", 1)
-        pack = measure_model("упаковка", 10, base_measure=piece)
+        piece = measure_model("шт", 1.0)
+        pack = measure_model("упаковка", 10.0, base_measure=piece)
 
         # Действие
 
@@ -29,7 +29,7 @@ class TestMeasureModel(unittest.TestCase):
         self.assertEqual(pack.conversion_factor, 10)
         self.assertIs(pack.base_measure, piece)
 
-        pack.conversion_factor = 20
+        pack.conversion_factor = 20.0
         self.assertEqual(pack.conversion_factor, 20)
 
         pack.base_measure = None

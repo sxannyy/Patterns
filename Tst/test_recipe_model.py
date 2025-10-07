@@ -1,7 +1,6 @@
 import unittest
 from Src.reposity import reposity
 from Src.start_service import start_service
-from Src.Models.nomenclature_model import nomenclature_model
 from Src.Models.recipe_model import recipe_model
 
 """
@@ -17,9 +16,14 @@ class TestRecipeModel(unittest.TestCase):
         self.__start_service.start()
 
     def test_add_ingredient_and_step(self):
+        # Подготовка
         recipe = recipe_model("Вафли")
+        
+        # Действие
         recipe.add_ingredient(self.__start_service.repo.data[reposity.nomenclature_key]['Пшеничная мука'], 100)
         recipe.add_step("Смешайте ингредиенты")
+
+        # Проверка
         self.assertIn("Пшеничная мука", recipe.ingredients[0][0].name)
         self.assertIn("Смешайте ингредиенты", recipe.steps) 
 
