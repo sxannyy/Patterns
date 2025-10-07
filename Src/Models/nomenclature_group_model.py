@@ -33,17 +33,3 @@ class nomenclature_group_model(abstract_model):
         nomenclature_group_model._instances[name] = item
         return item
     
-    """ Специи и пряности """
-    @staticmethod
-    def create_spices_and_herbs():
-        return nomenclature_group_model.create("специи и пряности")
-    
-    """ Продукты животного происхождения """
-    @staticmethod
-    def create_animal_products():
-        return nomenclature_group_model.create("продукты животного происхождения")
-    
-    """ Мука и крупы """
-    @staticmethod
-    def create_flour_and_cereals():
-        return nomenclature_group_model.create("мука и крупы")

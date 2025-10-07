@@ -47,6 +47,7 @@ class TestMeasureModel(unittest.TestCase):
 
         # Проверка
         self.assertEqual(kilo.base_measure, gram)
+        self.assertEqual(measure_model.create_kilogramm().base_measure, measure_model.create_gramm())
 
     def test_milliliter_equal(self):
         # Подготовка
@@ -57,6 +58,7 @@ class TestMeasureModel(unittest.TestCase):
 
         # Проверка
         self.assertEqual(liter, milli.base_measure)
+        self.assertEqual(measure_model.create_liter(), measure_model.create_milliliter().base_measure)
 
     def test_piece_create(self):
         # Подготовка

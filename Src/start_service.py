@@ -105,9 +105,9 @@ class start_service:
     )
 
     def __default_create_nomenclature_group(self):
-        self.__repo.data[reposity.nomenclature_group_key]['СиП'] = (nomenclature_group_model.create_spices_and_herbs())
-        self.__repo.data[reposity.nomenclature_group_key]['ЖПП'] = (nomenclature_group_model.create_animal_products())
-        self.__repo.data[reposity.nomenclature_group_key]['МиК'] = (nomenclature_group_model.create_flour_and_cereals())
+        self.__repo.data[reposity.nomenclature_group_key]['СиП'] = (nomenclature_group_model.create("специи и пряности"))
+        self.__repo.data[reposity.nomenclature_group_key]['ЖПП'] = (nomenclature_group_model.create("продукты животного происхождения"))
+        self.__repo.data[reposity.nomenclature_group_key]['МиК'] = (nomenclature_group_model.create("мука и крупы"))
 
     """
     Стартовый набор данных
