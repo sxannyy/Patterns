@@ -41,7 +41,6 @@ class TestSettingsLoadingFromFile(unittest.TestCase):
 
         # Действие
         res = sm1.load_settings()
-        model1 = sm1.company_settings()
 
         # Проверка
         self.assertTrue(res)
