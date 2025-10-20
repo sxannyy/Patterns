@@ -6,5 +6,6 @@
         "bank_account": 22233344455,
         "correspondent_account": 88877766655,
         "bik": 123123123
-    }
+    },
+    "response_format": "json"
 }
