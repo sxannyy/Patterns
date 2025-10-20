@@ -20,7 +20,7 @@ class TestRecipeModel(unittest.TestCase):
         recipe = recipe_model("Вафли")
         
         # Действие
-        recipe.add_ingredient(self.__start_service.repo.data[reposity.nomenclature_key]['Пшеничная мука'], 100)
+        recipe.add_ingredient(self.__start_service.repo.data[reposity.nomenclature_key()]['Пшеничная мука'], 100)
         recipe.add_step("Смешайте ингредиенты")
 
         # Проверка

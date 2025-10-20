@@ -52,18 +52,18 @@ class TestStartService(unittest.TestCase):
         data = self.__start_service.data()
 
         # Проверка
-        self.assertIn(reposity.measure_key, data)
-        self.assertIn(reposity.nomenclature_key, data)
-        self.assertIn(reposity.nomenclature_group_key, data)
-        self.assertIn(reposity.recipe_key, data)
-        self.assertEqual(len(data[reposity.measure_key]), 5)
-        self.assertEqual(len(data[reposity.nomenclature_key]), 8)
-        self.assertEqual(len(data[reposity.nomenclature_group_key]), 3)
-        self.assertEqual(len(data[reposity.recipe_key]), 3)
+        self.assertIn(reposity.measure_key(), data)
+        self.assertIn(reposity.nomenclature_key(), data)
+        self.assertIn(reposity.nomenclature_group_key(), data)
+        self.assertIn(reposity.recipe_key(), data)
+        self.assertEqual(len(data[reposity.measure_key()]), 5)
+        self.assertEqual(len(data[reposity.nomenclature_key()]), 8)
+        self.assertEqual(len(data[reposity.nomenclature_group_key()]), 3)
+        self.assertEqual(len(data[reposity.recipe_key()]), 3)
 
     def test_check_default_create_measure(self):
         # подготовка
-        measures = self.__start_service.data()[reposity.measure_key]
+        measures = self.__start_service.data()[reposity.measure_key()]
 
         # Действия
 
@@ -81,7 +81,7 @@ class TestStartService(unittest.TestCase):
 
     def test_check_default_create_nomenclature_group(self):
         # Подготовка
-        groups = self.__start_service.data()[reposity.nomenclature_group_key]
+        groups = self.__start_service.data()[reposity.nomenclature_group_key()]
 
         # Действия
 
@@ -95,7 +95,7 @@ class TestStartService(unittest.TestCase):
 
     def test_check_default_create_nomenclature(self):
         # Подготовка
-        nomenclature = self.__start_service.data()[reposity.nomenclature_key]
+        nomenclature = self.__start_service.data()[reposity.nomenclature_key()]
 
         # Действия
 
@@ -113,8 +113,8 @@ class TestStartService(unittest.TestCase):
 
     def test_check_default_create_recipe_waffles(self):
         # Подготовка
-        recipe = self.__start_service.data()[reposity.recipe_key]['Вафли']
-        recipes = self.__start_service.data()[reposity.recipe_key]
+        recipe = self.__start_service.data()[reposity.recipe_key()]['Вафли']
+        recipes = self.__start_service.data()[reposity.recipe_key()]
 
         # Действия
 
@@ -129,8 +129,8 @@ class TestStartService(unittest.TestCase):
 
     def test_check_create_omelette_recipe(self):
         # Подготовка
-        recipe = self.__start_service.data()[reposity.recipe_key]['Омлет с молоком']
-        recipes = self.__start_service.data()[reposity.recipe_key]
+        recipe = self.__start_service.data()[reposity.recipe_key()]['Омлет с молоком']
+        recipes = self.__start_service.data()[reposity.recipe_key()]
 
         # Действия
 
@@ -145,8 +145,8 @@ class TestStartService(unittest.TestCase):
 
     def test_check_create_flatjack_recipe(self):
         # Подготовка
-        recipe = self.__start_service.data()[reposity.recipe_key]['Простые лепешки']
-        recipes = self.__start_service.data()[reposity.recipe_key]
+        recipe = self.__start_service.data()[reposity.recipe_key()]['Простые лепешки']
+        recipes = self.__start_service.data()[reposity.recipe_key()]
 
         # Действия
 
@@ -167,17 +167,17 @@ class TestStartService(unittest.TestCase):
 
         # Проверка
         # Проверяем меры
-        self.assertGreater(len(data[reposity.measure_key]), 0)
+        self.assertGreater(len(data[reposity.measure_key()]), 0)
         # Проверяем группы номенклатуры
-        self.assertGreater(len(data[reposity.nomenclature_group_key]), 0)
+        self.assertGreater(len(data[reposity.nomenclature_group_key()]), 0)
         # Проверяем номенклатуру
-        self.assertGreater(len(data[reposity.nomenclature_key]), 0)
+        self.assertGreater(len(data[reposity.nomenclature_key()]), 0)
         # Проверяем рецепты
-        self.assertGreater(len(data[reposity.recipe_key]), 0)
+        self.assertGreater(len(data[reposity.recipe_key()]), 0)
         # Проверяем конкретные рецепты
-        self.assertIn('Вафли', data[reposity.recipe_key])
-        self.assertIn('Омлет с молоком', data[reposity.recipe_key])
-        self.assertIn('Простые лепешки', data[reposity.recipe_key])
+        self.assertIn('Вафли', data[reposity.recipe_key()])
+        self.assertIn('Омлет с молоком', data[reposity.recipe_key()])
+        self.assertIn('Простые лепешки', data[reposity.recipe_key()])
 
 if __name__ == '__main__':
     unittest.main()
