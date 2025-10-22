@@ -9,34 +9,67 @@ import json, os
 class settings_manager:
 
     """
-    Загрузчик и держатель конфигурации приложения.
+    Загрузчик и держатель конфигурации приложения. Реализован как Singleton.
+
     Ответственность:
         - Хранит путь к файлу конфигурации.
-        - Загружает JSON и мапит его в settings_model -> company_model.
-        - Предоставляет доступ к текущим настройкам.
+        - Загружает JSON из файла конфигурации и мапит его в объекты settings_model и company_model.
+        - Предоставляет доступ к текущим настройкам приложения через методы.
+        - Обеспечивает хранение настроек в единственном экземпляре (Singleton).
+
     Ограничения:
-        - При ошибках загрузки возвращает False, оставляя настройки по умолчанию.
+        - В случае ошибок при загрузке настроек, оставляет настройки по умолчанию.
+        - Предполагает, что файл конфигурации содержит секции настроек для company и других 
+          глобальных атрибутов settings_model.
+
     """
 
-    __config_namefile:str = ""
-    __settings:settings_model = None
-    __load_result:dict
+    __config_namefile: str = ""  # Путь к файлу конфигурации.
+    __settings: settings_model = None  # Объект settings_model, хранящий конфигурацию.
+    __load_result: dict = None # Словарь, содержащий результат загрузки из JSON (не используется явно, потенциально можно удалить)
+    __global_attributes: list = ["company", "response_format"]  # Список глобальных атрибутов settings_model.
+    __settings_dict: list = ["company"] # Список атрибутов settings_model, которые нужно конвертировать из словаря
 
-    def __init__(self, config_filename:str):
+    def __init__(self, config_filename: str):
+        """
+        Конструктор класса.  Инициализирует менеджер настроек с указанным именем файла конфигурации.
+        Сохраняет относительный путь к файлу и загружает настройки по умолчанию.
+
+        Аргументы:
+            config_filename (str): Имя файла конфигурации.
+        """
         self.__config_namefile = os.path.relpath(config_filename)
-        self.default()
+        self.default() # Загрузка настроек по умолчанию
 
     def __new__(cls, *args, **kwargs):
+        """
+        Реализация Singleton паттерна.  Гарантирует, что у класса будет только один экземпляр.
+        """
         if not hasattr(cls, 'instance'):
             cls.instance = super(settings_manager, cls).__new__(cls)
         return cls.instance
 
     @property
     def config_namefile(self) -> str:
+        """
+        Возвращает путь к файлу конфигурации.
+
+        Возвращает:
+            str: Путь к файлу конфигурации.
+        """
         return self.__config_namefile
-    
+
     @config_namefile.setter
-    def config_namefile(self, value:str):
+    def config_namefile(self, value: str):
+        """
+        Устанавливает путь к файлу конфигурации.
+
+        Аргументы:
+            value (str): Новый путь к файлу конфигурации.
+
+        Проверяет, что переданное значение является строкой, и что файл существует.
+        В противном случае выбрасывает исключение argument_exception.
+        """
         validator.validate(value, str)
         abs_path = os.path.abspath(value)
         if os.path.exists(abs_path):
@@ -44,35 +77,58 @@ class settings_manager:
         else:
             raise argument_exception(f'Не найден файл настроек {abs_path}')
 
-    def settings(self)-> settings_model:
-        """ Возвращает текущие настройки приложения (объект settings_model) """
-        return self.__settings
-    
-    def company_settings(self) -> company_model:
-        """ Удобный аксессор: возвращает settings.company """
-        return self.__settings.company
-    
-    def convert_to_settings(self) -> bool:
+    def settings(self) -> settings_model:
+        """
+        Возвращает текущие настройки приложения (объект settings_model).
 
+        Возвращает:
+            settings_model: Объект settings_model, содержащий текущие настройки.
         """
-        Преобразует загруженный словарь в экземпляры доменных моделей.
-        Returns:
-            bool: True при успешном маппинге; False, если структура некорректна.
+        return self.__settings
+
+    def company_settings(self) -> company_model:
         """
+        Удобный аксессор: возвращает settings.company.
+
+        Возвращает:
+            company_model: Объект company_model, содержащий настройки компании.
+        """
+        return self.__settings.company
+
+    def convert_to_settings(self, load_result: dict, key: str) -> bool:
+        """
+        Преобразует загруженный словарь в экземпляры доменных моделей (company_model).
+
+        Аргументы:
+            load_result (dict): Загруженный словарь настроек.
+            key (str): Ключ, под которым находятся настройки компании в словаре.
+
+        Возвращает:
+            bool: True при успешном маппинге; False, если структура некорректна (не хватает полей).
+        """
+
+        load_result = load_result[key]
 
         fields = ["name", "type_of_property", "inn", "bank_account", "correspondent_account", "bik"]
-        if not all(field in self.__load_result for field in fields):
+        if not all(field in load_result for field in fields):
             return False
+
+        self.__settings.company = company_model()
+
         for field in fields:
-            setattr(self.__settings.company, field, self.__load_result[field])
+            setattr(self.__settings.company, field, load_result[field]) # Установка атрибутов company_model из словаря
         return True
 
     def load_settings(self) -> bool:
-
         """
         Загружает настройки из JSON-файла, обновляя внутреннее состояние.
-        Returns:
+
+        Возвращает:
             bool: True - если загрузка успешна и структура корректна, иначе False.
+
+        Обрабатывает исключения при открытии и чтении файла. Проверяет, что в файле
+        присутствуют все необходимые глобальные атрибуты.  Использует convert_to_settings
+        для маппинга настроек компании в объект company_model.
         """
 
         if self.config_namefile.strip() == "":
@@ -80,19 +136,33 @@ class settings_manager:
         try:
             with open(self.config_namefile,'r') as file:
                 data = json.load(file)
-                if "company" in data:
-                    self.__load_result = data["company"]
-                    return self.convert_to_settings()
-                return False
-        except:
+                for key in self.__global_attributes:
+                    if key not in data.keys():
+                        return False
+
+                self.__settings = settings_model()
+
+                for key in self.__global_attributes:
+                    if key in self.__settings_dict:
+                        if not self.convert_to_settings(data, key):
+                            return False # Ошибка конвертации настроек компании
+                    else:
+                        setattr(self.__settings, key, data[key])
+            return True
+        except Exception as e:
+            print(f"Ошибка при загрузке настроек: {e}") # Logging ошибки
             return False
-    
+
     def default(self):
+        """
+        Устанавливает настройки по умолчанию.  Используется при инициализации и в случае ошибок загрузки.
+        Создает объекты settings_model и company_model и заполняет их значениями по умолчанию.
+        """
         self.__settings = settings_model()
         self.__settings.company = company_model()
         self.__settings.company.name = "Название компании"
-        self.__settings.company.type_of_property= "ОООАА"
-        self.__settings.company.inn=0
-        self.__settings.company.bank_account=0
-        self.__settings.company.correspondent_account=0
-        self.__settings.company.bik=0
+        self.__settings.company.type_of_property = "ОООАА"
+        self.__settings.company.inn = 0
+        self.__settings.company.bank_account = 0
+        self.__settings.company.correspondent_account = 0
+        self.__settings.company.bik = 0
