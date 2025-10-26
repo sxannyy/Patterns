@@ -52,11 +52,14 @@ class TestRecipeFiles(unittest.TestCase):
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        expected_header = "ingredients;name;steps"
+        # Проверяем структуру CSV
+        expected_header = "id;ingredients;name;steps"
         self.assertIn(expected_header, content)
         self.assertIn("Простые лепешки", content)
         self.assertIn("Пшеничная мука", content)
         self.assertIn("400", content)
+        self.assertIn("Яйца куриные", content)
+        self.assertIn("Молоко", content)
 
     def test_create_recipe_json_file(self):
         # Подготовка
@@ -77,9 +80,21 @@ class TestRecipeFiles(unittest.TestCase):
             content = f.read()
             data = json.loads(content)
         
-        self.assertEqual(data[0]["name"], "Простые лепешки")
-        self.assertIn("Пшеничная мука", [ing["nomenclature"] for ing in data[0]["ingredients"]])
-        self.assertIn("Подготовка ингредиентов", data[0]["steps"][0])
+        # Проверяем структуру JSON
+        self.assertIsInstance(data, list)
+        recipe_data = data[0]
+        self.assertEqual(recipe_data["name"], "Простые лепешки")
+        self.assertIn("id", recipe_data)
+        self.assertIn("ingredients", recipe_data)
+        self.assertIn("steps", recipe_data)
+        
+        # Проверяем ингредиенты
+        ingredient_names = [ing["nomenclature_name"] for ing in recipe_data["ingredients"]]
+        self.assertIn("Пшеничная мука", ingredient_names)
+        self.assertIn("Яйца куриные", ingredient_names)
+        
+        # Проверяем шаги
+        self.assertIn("Подготовка ингредиентов", recipe_data["steps"][0])
 
     def test_create_recipe_markdown_file(self):
         # Подготовка
@@ -99,12 +114,14 @@ class TestRecipeFiles(unittest.TestCase):
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        # Проверяем структуру Markdown
         self.assertIn("# Простые лепешки", content)
-        self.assertIn("## Ингредиенты:", content)
+        self.assertIn("## Свойства:", content)
+        self.assertIn("| Свойство | Значение |", content)
         self.assertIn("Пшеничная мука", content)
         self.assertIn("400", content)
-        self.assertIn("## Шаги приготовления:", content)
-        self.assertIn("Подготовка ингредиентов", content)
+        self.assertIn("ingredients", content)
+        self.assertIn("steps", content)
 
     def test_create_recipe_xml_file(self):
         # Подготовка
@@ -124,10 +141,13 @@ class TestRecipeFiles(unittest.TestCase):
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
         
+        # Проверяем структуру XML
         self.assertIn('<?xml version="1.0" encoding="UTF-8"?>', content)
         self.assertIn("<name>Простые лепешки</name>", content)
-        self.assertIn("Пшеничная мука", content)
-        self.assertIn("400", content)
+        self.assertIn("<ingredients>", content)
+        self.assertIn("<nomenclature_name>Пшеничная мука</nomenclature_name>", content)
+        self.assertIn("<quantity>400</quantity>", content)
+        self.assertIn("<steps>", content)
         self.assertIn("Подготовка ингредиентов", content)
 
     def test_create_all_recipe_formats(self):
@@ -173,22 +193,36 @@ class TestRecipeFiles(unittest.TestCase):
         md_content = self.responder_markdown.create(recipe)
         xml_content = self.responder_xml.create(recipe)
 
-        # Проверка
+        # Проверка для CSV
         self.assertIn("Простые лепешки", csv_content)
-        self.assertIn("Простые лепешки", json_content)
-        self.assertIn("Простые лепешки", md_content)
-        self.assertIn("Простые лепешки", xml_content)
-        
         for ingredient in ingredients_to_check:
             self.assertIn(ingredient, csv_content)
-            self.assertIn(ingredient, json_content)
-            self.assertIn(ingredient, md_content)
-            self.assertIn(ingredient, xml_content)
-        
         for step in steps_to_check:
             self.assertIn(step, csv_content)
-            self.assertIn(step, json_content)
+
+        # Проверка для JSON
+        json_data = json.loads(json_content)
+        recipe_json = json_data[0]
+        self.assertEqual(recipe_json["name"], "Простые лепешки")
+        ingredient_names = [ing["nomenclature_name"] for ing in recipe_json["ingredients"]]
+        for ingredient in ingredients_to_check:
+            self.assertIn(ingredient, ingredient_names)
+        for step in steps_to_check:
+            step_found = any(step in s for s in recipe_json["steps"])
+            self.assertTrue(step_found, f"Шаг '{step}' не найден в JSON")
+
+        # Проверка для Markdown
+        self.assertIn("# Простые лепешки", md_content)
+        for ingredient in ingredients_to_check:
+            self.assertIn(ingredient, md_content)
+        for step in steps_to_check:
             self.assertIn(step, md_content)
+
+        # Проверка для XML
+        self.assertIn("<name>Простые лепешки</name>", xml_content)
+        for ingredient in ingredients_to_check:
+            self.assertIn(ingredient, xml_content)
+        for step in steps_to_check:
             self.assertIn(step, xml_content)
 
 if __name__ == '__main__':

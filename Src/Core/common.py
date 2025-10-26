@@ -37,7 +37,6 @@ class common:
                 # Флаг. Только простые типы и модели включать
                 if is_common == True and (isinstance(value, dict) or isinstance(value, list) ):
                     continue
-
                 result.append(item)
         return result
 
