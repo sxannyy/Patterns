@@ -1,0 +1,97 @@
+from Src.Convertors.basic_convertor import basic_convertor
+from Src.Convertors.datetime_convertor import datetime_convertor
+from Src.Convertors.reference_convertor import reference_convertor
+from typing import Any, Dict, List
+
+from Src.Core.common import common
+
+class convert_factory:
+
+    """
+    Фабрика для преобразования объектов любых типов в словари.
+    Использует цепочку конвертеров: basic -> datetime -> reference.
+    """
+
+    def __init__(self):
+
+        """
+        Инициализирует цепочку конвертеров в порядке приоритета.
+        """
+
+        self.__converters = [
+            basic_convertor(),      # Простые типы (str, int, float, bool, None)
+            datetime_convertor(),   # Дата/время (datetime, date, time)  
+            reference_convertor()   # Модели, DTO, объекты
+        ]
+
+    def convert(self, obj: Any) -> Dict[str, Any]:
+
+        """
+        Преобразует любой объект в словарь используя подходящий конвертер.
+        Аргументы:
+            obj: Любой объект для преобразования
+        Возвращает:
+            Dict[str, Any]: Словарь с данными объекта
+        """
+
+        # Обрабатываем None отдельно
+        if obj is None:
+            return None
+        
+        if isinstance(obj, list):
+            return self.convert_list(obj)
+                
+        if isinstance(obj, dict):
+            return self.convert_dict(obj)
+            
+        
+        # Проходим по цепочке конвертеров
+        for converter in self.__converters:
+            if converter.can_convert(obj):
+                result = converter.convert(obj)
+                if isinstance(converter, reference_convertor):
+                    fields = common.get_fields(result)
+                    return {key: self.convert(getattr(result, key)) for key in fields}
+                return result
+        
+        # Fallback: если ни один конвертер не подошел
+        return {
+            'value': str(obj),
+            'type': 'unknown', 
+            'converter': 'factory_fallback',
+            'original_type': type(obj).__name__
+        }
+
+    def convert_list(self, objects: List[Any]) -> List[Dict[str, Any]]:
+
+        """
+        Преобразует список объектов в список словарей.
+        Аргументы:
+            objects: Список объектов для преобразования
+        Возвращает:
+            List[Dict[str, Any]]: Список преобразованных объектов
+        """
+        return [self.convert(obj) for obj in objects]
+
+    def convert_dict(self, obj_dict: Dict[Any, Any]) -> Dict[str, Any]:
+        """
+        Преобразует словарь объектов в словарь преобразованных объектов.
+        Аргументы:
+            obj_dict: Словарь объектов для преобразования
+        Возвращает:
+            Dict[str, Any]: Словарь с преобразованными объектами
+        """
+        return {str(key): self.convert(value) for key, value in obj_dict.items()}
+
+    def get_converters_info(self) -> List[Dict[str, str]]:
+        
+        """ Возвращает информацию о доступных конвертерах """
+
+        info = []
+        for converter in self.__converters:
+            info.append({
+                'name': converter.__class__.__name__,
+                'module': converter.__class__.__module__,
+                'description': converter.__doc__.strip().split('\n')[0] if converter.__doc__ else 'No description'
+            })
+        return info
