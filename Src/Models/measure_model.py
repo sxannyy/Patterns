@@ -1,6 +1,7 @@
 from Src.Core.validator import validator
 from Src.Core.abstract_model import abstract_model
 from Src.Core.validator import argument_exception
+from Src.Dto.measure_dto import measure_dto
 
 """
     Доменная модель «Единица измерения».
@@ -101,3 +102,26 @@ class measure_model(abstract_model):
         inner_liter = measure_model.create_liter()
         return measure_model.create("миллилитер", inner_liter, 0.001)
     
+    """
+    Фабричный метод из Dto
+    """
+    @staticmethod
+    def from_dto(dto:measure_dto, cache:dict):
+        validator.validate(dto, measure_dto)
+        validator.validate(cache, dict)
+        base  = cache[ dto.base_id ] if dto.base_id in cache else None
+        item = measure_model.create(dto.name, dto.value, base)
+        return item
+    
+    def to_dto(self) -> measure_dto:
+
+        """
+        Преобразует measure_model в measure_dto
+        """
+        
+        dto = measure_dto()
+        dto.id = self.unique_code
+        dto.name = self.name
+        dto.base_id = self.base_measure.unique_code if self.base_measure else None
+        dto.value = self.conversion_factor
+        return dto

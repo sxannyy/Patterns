@@ -2,7 +2,8 @@ from Src.Core.abstract_model import abstract_model
 from Src.Core.validator import validator
 
 """
-Общий класс для наследования. Содержит стандартное определение: код, наименование
+    Общий класс для наследования
+    Содержит стандартное определение: код, наименование
 """
 
 class entity_model(abstract_model):
@@ -24,5 +25,3 @@ class entity_model(abstract_model):
         item = entity_model()
         item.name = name
         return item
-    
-  

@@ -1,6 +1,5 @@
 from Src.Models.settings_model import settings_model
 from Src.Core.validator import argument_exception
-from Src.Core.validator import operation_exception
 from Src.Core.validator import validator
 from Src.Models.company_model import company_model
 
@@ -26,7 +25,6 @@ class settings_manager:
 
     __config_namefile: str = ""  # Путь к файлу конфигурации.
     __settings: settings_model = None  # Объект settings_model, хранящий конфигурацию.
-    __load_result: dict = None # Словарь, содержащий результат загрузки из JSON (не используется явно, потенциально можно удалить)
     __global_attributes: list = ["company", "response_format"]  # Список глобальных атрибутов settings_model.
     __settings_dict: list = ["company"] # Список атрибутов settings_model, которые нужно конвертировать из словаря
 
