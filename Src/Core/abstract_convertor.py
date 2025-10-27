@@ -20,15 +20,3 @@ class abstract_convertor(ABC):
         """
 
         pass
-    
-    @abstractmethod
-    def can_convert(self, obj: Any) -> bool:
-
-        """
-        Проверяет, может ли конвертер обработать данный тип объекта
-        Аргументы:
-            obj: Объект для проверки
-        Возвращает:
-            bool: True если конвертер может обработать данный тип
-        """
-        pass

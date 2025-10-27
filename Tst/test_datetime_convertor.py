@@ -1,5 +1,6 @@
 import unittest
 from datetime import datetime, date, time
+from Src.Convertors.convert_factory import convert_factory
 from Src.Convertors.datetime_convertor import datetime_convertor
 
 """
@@ -14,46 +15,7 @@ from Src.Convertors.datetime_convertor import datetime_convertor
 class TestDatetimeConvertor(unittest.TestCase):
 
     def setUp(self):
-        self.convertor = datetime_convertor()
-
-    def test_can_convert_datetime(self):
-        # Подготовка
-        dt = datetime(2023, 12, 25, 14, 30, 45)
-
-        # Действие
-        result = self.convertor.can_convert(dt)
-
-        # Проверка
-        self.assertTrue(result)
-
-    def test_can_convert_date(self):
-        # Подготовка
-        d = date(2023, 12, 25)
-
-        # Действие
-        result = self.convertor.can_convert(d)
-
-        # Проверка
-        self.assertTrue(result)
-
-    def test_can_convert_time(self):
-        # Подготовка
-        t = time(14, 30, 45)
-
-        # Действие
-        result = self.convertor.can_convert(t)
-
-        # Проверка
-        self.assertTrue(result)
-
-    def test_cannot_convert_other_types(self):
-        # Подготовка
-        test_cases = ["string", 123, 45.67, True, None, {"key": "value"}]
-
-        # Действие и проверка
-        for test_case in test_cases:
-            result = self.convertor.can_convert(test_case)
-            self.assertFalse(result, f"Не должен конвертировать тип: {type(test_case)}")
+        self.convertor = convert_factory()
 
     def test_convert_datetime(self):
         # Подготовка
@@ -102,29 +64,7 @@ class TestDatetimeConvertor(unittest.TestCase):
         self.assertEqual(result['second'], 45)
         self.assertIn('iso_format', result)
         self.assertEqual(result['iso_format'], '14:30:45')
-
-    def test_convert_unconvertible_object(self):
-        # Подготовка
-        unconvertible_obj = "not_a_datetime"
-
-        # Действие
-        result = self.convertor.convert(unconvertible_obj)
-
-        # Проверка
-        expected = {'value': 'not_a_datetime', 'type': 'other'}
-        self.assertEqual(result, expected)
-
-    def test_convert_none_object(self):
-        # Подготовка
-        none_obj = None
-
-        # Действие
-        result = self.convertor.convert(none_obj)
-
-        # Проверка
-        expected = {'value': None, 'type': 'other'}
-        self.assertEqual(result, expected)
-
+        
     def test_datetime_edge_cases(self):
         # Подготовка
         edge_cases = [

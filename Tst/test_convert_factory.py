@@ -108,24 +108,5 @@ class TestConvertFactory(unittest.TestCase):
         self.assertEqual(result["string"], "hello")
         self.assertEqual(result["boolean"], True)
 
-    def test_get_converters_info(self):
-        # Действие
-        result = self.factory.get_converters_info()
-
-        # Проверка
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 3)
-        
-        # Проверяем структуру информации о конвертерах
-        for converter_info in result:
-            self.assertIn('name', converter_info)
-            self.assertIn('module', converter_info)
-            self.assertIn('description', converter_info)
-            
-        # Проверяем порядок конвертеров
-        converter_names = [info['name'] for info in result]
-        expected_order = ['basic_convertor', 'datetime_convertor', 'reference_convertor']
-        self.assertEqual(converter_names, expected_order)
-
 if __name__ == '__main__':
     unittest.main()

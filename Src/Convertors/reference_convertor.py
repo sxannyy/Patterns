@@ -21,12 +21,12 @@ class reference_convertor(abstract_convertor):
             Dict[str, Any]: Словарь с данными объекта
         """
 
-        if not self.can_convert(obj):
+        if not self.__can_convert(obj):
             return {'value': obj, 'type': 'unconvertible'}
         
         return obj.to_dto()
 
-    def can_convert(self, obj: Any) -> bool:
+    def __can_convert(self, obj: Any) -> bool:
 
         """ Проверяет, является ли объект ссылочным типом """
         return (isinstance(obj, (abstract_model, abstract_dto)) or 

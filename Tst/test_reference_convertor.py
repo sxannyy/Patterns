@@ -43,59 +43,6 @@ class TestReferenceConvertor(unittest.TestCase):
     def setUp(self):
         self.convertor = reference_convertor()
 
-    def test_can_convert_abstract_model(self):
-        # Подготовка
-        model = TestReferenceModel()
-
-        # Действие
-        result = self.convertor.can_convert(model)
-
-        # Проверка
-        self.assertTrue(result)
-
-    def test_can_convert_abstract_dto(self):
-        # Подготовка
-        dto = TestReferenceDTO()
-
-        # Действие
-        result = self.convertor.can_convert(dto)
-
-        # Проверка
-        self.assertTrue(result)
-
-    def test_can_convert_regular_object(self):
-        # Подготовка
-        class RegularClass:
-            def __init__(self):
-                self.field = "value"
-
-        obj = RegularClass()
-
-        # Действие
-        result = self.convertor.can_convert(obj)
-
-        # Проверка
-        self.assertTrue(result)
-
-    def test_cannot_convert_basic_types(self):
-        # Подготовка
-        test_cases = ["string", 123, 45.67, True, None]
-
-        # Действие и проверка
-        for test_case in test_cases:
-            result = self.convertor.can_convert(test_case)
-            self.assertFalse(result, f"Не должен конвертировать тип: {type(test_case)}")
-
-    def test_cannot_convert_type_class(self):
-        # Подготовка
-        class_type = TestReferenceModel
-
-        # Действие
-        result = self.convertor.can_convert(class_type)
-
-        # Проверка
-        self.assertFalse(result)
-
     def test_convert_abstract_model(self):
         # Подготовка
         model = TestReferenceModel("test_model")

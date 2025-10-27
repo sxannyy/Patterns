@@ -21,21 +21,12 @@ class basic_convertor(abstract_convertor):
             ValueError: Если объект не является простым типом
         """
 
-        if not self.can_convert(obj):
+        if not self.__can_convert(obj):
             raise ValueError(f"Basic_convertor не может обработать тип: {type(obj)}")
-        
-        # Определяем тип данных
-        type_mapping = {
-            str: 'string',
-            int: 'integer',
-            float: 'float', 
-            bool: 'boolean',
-            type(None): 'null'
-        }
         
         return obj
     
-    def can_convert(self, obj: Any) -> bool:
+    def __can_convert(self, obj: Any) -> bool:
 
         """
         Проверяет, может ли конвертер обработать данный объект.

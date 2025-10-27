@@ -1,8 +1,12 @@
+from datetime import date, datetime, time
+from Src.Convertors.date_convertor import date_convertor
+from Src.Convertors.time_convertor import time_convertor
 from Src.Convertors.basic_convertor import basic_convertor
 from Src.Convertors.datetime_convertor import datetime_convertor
 from Src.Convertors.reference_convertor import reference_convertor
 from typing import Any, Dict, List
 
+from Src.Core.abstract_model import abstract_model
 from Src.Core.common import common
 
 class convert_factory:
@@ -18,11 +22,20 @@ class convert_factory:
         Инициализирует цепочку конвертеров в порядке приоритета.
         """
 
-        self.__converters = [
-            basic_convertor(),      # Простые типы (str, int, float, bool, None)
-            datetime_convertor(),   # Дата/время (datetime, date, time)  
-            reference_convertor()   # Модели, DTO, объекты
-        ]
+        self.__converters = {
+            # Простые типы (str, int, float, bool, None)
+            str: basic_convertor(),
+            int: basic_convertor(),
+            float: basic_convertor(),
+            bool: basic_convertor(),
+            None: basic_convertor(),
+            # Дата/время (datetime, date, time)  
+            datetime: datetime_convertor(), 
+            date: date_convertor(),
+            time: time_convertor(),   
+            # Модели, DTO, объекты
+            abstract_model: reference_convertor()
+        }
 
     def convert(self, obj: Any) -> Dict[str, Any]:
 
@@ -43,24 +56,27 @@ class convert_factory:
                 
         if isinstance(obj, dict):
             return self.convert_dict(obj)
+        
+        if type(obj) in self.__converters.keys():
+            converter = self.__converters[type(obj)]
+            return converter.convert(obj)
             
+        if type(obj).__bases__[0] not in self.__converters.keys():
+
+            # Fallback: если ни один конвертер не подошел
+            return {
+                'value': str(obj),
+                'type': 'unknown', 
+                'converter': 'factory_fallback',
+                'original_type': type(obj).__name__
+            }
         
-        # Проходим по цепочке конвертеров
-        for converter in self.__converters:
-            if converter.can_convert(obj):
-                result = converter.convert(obj)
-                if isinstance(converter, reference_convertor):
-                    fields = common.get_fields(result)
-                    return {key: self.convert(getattr(result, key)) for key in fields}
-                return result
-        
-        # Fallback: если ни один конвертер не подошел
-        return {
-            'value': str(obj),
-            'type': 'unknown', 
-            'converter': 'factory_fallback',
-            'original_type': type(obj).__name__
-        }
+        converter = self.__converters[type(obj).__bases__[0]]
+        result = converter.convert(obj)
+        if isinstance(converter, reference_convertor):
+            fields = common.get_fields(result)
+            return {key: self.convert(getattr(result, key)) for key in fields}
+        return result
 
     def convert_list(self, objects: List[Any]) -> List[Dict[str, Any]]:
 
@@ -71,9 +87,11 @@ class convert_factory:
         Возвращает:
             List[Dict[str, Any]]: Список преобразованных объектов
         """
+
         return [self.convert(obj) for obj in objects]
 
     def convert_dict(self, obj_dict: Dict[Any, Any]) -> Dict[str, Any]:
+
         """
         Преобразует словарь объектов в словарь преобразованных объектов.
         Аргументы:
@@ -81,17 +99,5 @@ class convert_factory:
         Возвращает:
             Dict[str, Any]: Словарь с преобразованными объектами
         """
+
         return {str(key): self.convert(value) for key, value in obj_dict.items()}
-
-    def get_converters_info(self) -> List[Dict[str, str]]:
-        
-        """ Возвращает информацию о доступных конвертерах """
-
-        info = []
-        for converter in self.__converters:
-            info.append({
-                'name': converter.__class__.__name__,
-                'module': converter.__class__.__module__,
-                'description': converter.__doc__.strip().split('\n')[0] if converter.__doc__ else 'No description'
-            })
-        return info

@@ -19,18 +19,18 @@ class datetime_convertor(abstract_convertor):
             Dict[str, Any]: Словарь с данными datetime объекта
         """
 
-        if not self.can_convert(obj):
+        if not self.__can_convert(obj):
             return {'value': obj, 'type': 'other'}
         
         return self.__convert_datetime(obj)
 
-    def can_convert(self, obj: Any) -> bool:
+    def __can_convert(self, obj: Any) -> bool:
 
         """ Проверяет, является ли объект datetime типом """
 
-        return isinstance(obj, (datetime, date, time))
+        return isinstance(obj, datetime)
 
-    def __convert_datetime(self, dt_obj: Any) -> Dict[str, Any]:
+    def __convert_datetime(self, dt_obj: Any) -> Dict[str, datetime]:
 
         """ Преобразует datetime объект в словарь """
         if isinstance(dt_obj, datetime):
@@ -41,22 +41,6 @@ class datetime_convertor(abstract_convertor):
                 'day': dt_obj.day,
                 'hour': dt_obj.hour,
                 'minute': dt_obj.minute,
-                'second': dt_obj.second,
-                'iso_format': dt_obj.isoformat()
-            }
-        elif isinstance(dt_obj, date):
-            return {
-                'type': 'date', 
-                'year': dt_obj.year,
-                'month': dt_obj.month,
-                'day': dt_obj.day,
-                'iso_format': dt_obj.isoformat()
-            }
-        elif isinstance(dt_obj, time):
-            return {
-                'type': 'time',
-                'hour': dt_obj.hour,
-                'minute': dt_obj.minute, 
                 'second': dt_obj.second,
                 'iso_format': dt_obj.isoformat()
             }
