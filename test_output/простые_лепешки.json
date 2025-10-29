@@ -1,28 +1,39 @@
 [
   {
-    "name": "Простые лепешки",
+    "id": "6ced2a1af199404a86d095915d73b073",
     "ingredients": [
       {
-        "nomenclature": "Пшеничная мука",
-        "quantity": 400
+        "nomenclature_id": "5271fae9c3094b5c958bc39533d30462",
+        "nomenclature_name": "Пшеничная мука",
+        "quantity": 400,
+        "measure_unit": "грамм"
       },
       {
-        "nomenclature": "Яйца куриные",
-        "quantity": 2
+        "nomenclature_id": "44cee798e2ed4e97bf7890d283ecfb21",
+        "nomenclature_name": "Яйца куриные",
+        "quantity": 2,
+        "measure_unit": "шт"
       },
       {
-        "nomenclature": "Молоко",
-        "quantity": 200
+        "nomenclature_id": "dd0ea9b7861f44d992668419ad86051f",
+        "nomenclature_name": "Молоко",
+        "quantity": 200,
+        "measure_unit": "миллилитер"
       },
       {
-        "nomenclature": "Соль",
-        "quantity": 5
+        "nomenclature_id": "b83beee3ccdd41579e5a539b88fb831b",
+        "nomenclature_name": "Соль",
+        "quantity": 5,
+        "measure_unit": "грамм"
       },
       {
-        "nomenclature": "Сливочное масло",
-        "quantity": 30
+        "nomenclature_id": "5643402068e043f9828a8d8f24a58fa1",
+        "nomenclature_name": "Сливочное масло",
+        "quantity": 30,
+        "measure_unit": "грамм"
       }
     ],
+    "name": "Простые лепешки",
     "steps": [
       "Подготовка ингредиентов: В миске взбейте яйца куриные с солью до однородности",
       "Смешивание жидкой основы: Добавьте молоко и растопленное сливочное масло, тщательно перемешайте",
