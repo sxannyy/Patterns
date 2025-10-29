@@ -31,12 +31,11 @@ class time_convertor(abstract_convertor):
         return isinstance(obj, time)
 
     def __convert_time(self, dt_obj: Any) -> Dict[str, time]:
-        
-        if isinstance(dt_obj, time):
-            return {
-                'type': 'time',
-                'hour': dt_obj.hour,
-                'minute': dt_obj.minute, 
-                'second': dt_obj.second,
-                'iso_format': dt_obj.isoformat()
-            }
+    
+        return {
+            'type': 'time',
+            'hour': dt_obj.hour,
+            'minute': dt_obj.minute, 
+            'second': dt_obj.second,
+            'iso_format': dt_obj.isoformat()
+        }

@@ -1,5 +1,5 @@
 from Src.Core.abstract_convertor import abstract_convertor
-from typing import Any, Dict
+from typing import Any
 
 class basic_convertor(abstract_convertor):
 
@@ -9,14 +9,12 @@ class basic_convertor(abstract_convertor):
     Не обрабатывает списки, словари, объекты - только обычные типы.
     """
     
-    def convert(self, obj: Any) -> Dict[str, Any]:
+    def convert(self, obj: Any) -> str|int|float|bool|None:
 
         """
         Преобразует простые типы данных в словарь.
         Аргументы:
             obj: Объект для преобразования (простой тип)
-        Возвращает:
-            Dict[str, Any]: Словарь с данными
         Ошибки:
             ValueError: Если объект не является простым типом
         """

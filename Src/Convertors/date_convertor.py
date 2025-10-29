@@ -1,5 +1,5 @@
 from Src.Core.abstract_convertor import abstract_convertor
-from datetime import datetime, date, time
+from datetime import date
 from typing import Any, Dict
 
 class date_convertor(abstract_convertor):
@@ -32,11 +32,10 @@ class date_convertor(abstract_convertor):
 
     def __convert_date(self, dt_obj: Any) -> Dict[str, date]:
 
-        if isinstance(dt_obj, date):
-            return {
-                'type': 'date', 
-                'year': dt_obj.year,
-                'month': dt_obj.month,
-                'day': dt_obj.day,
-                'iso_format': dt_obj.isoformat()
-            }
+        return {
+            'type': 'date', 
+            'year': dt_obj.year,
+            'month': dt_obj.month,
+            'day': dt_obj.day,
+            'iso_format': dt_obj.isoformat()
+        }

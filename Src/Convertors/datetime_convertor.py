@@ -1,5 +1,5 @@
 from Src.Core.abstract_convertor import abstract_convertor
-from datetime import datetime, date, time
+from datetime import datetime
 from typing import Any, Dict
 
 class datetime_convertor(abstract_convertor):
@@ -33,14 +33,13 @@ class datetime_convertor(abstract_convertor):
     def __convert_datetime(self, dt_obj: Any) -> Dict[str, datetime]:
 
         """ Преобразует datetime объект в словарь """
-        if isinstance(dt_obj, datetime):
-            return {
-                'type': 'datetime',
-                'year': dt_obj.year,
-                'month': dt_obj.month,
-                'day': dt_obj.day,
-                'hour': dt_obj.hour,
-                'minute': dt_obj.minute,
-                'second': dt_obj.second,
-                'iso_format': dt_obj.isoformat()
-            }
+        return {
+            'type': 'datetime',
+            'year': dt_obj.year,
+            'month': dt_obj.month,
+            'day': dt_obj.day,
+            'hour': dt_obj.hour,
+            'minute': dt_obj.minute,
+            'second': dt_obj.second,
+            'iso_format': dt_obj.isoformat()
+        }
