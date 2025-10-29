@@ -30,13 +30,6 @@ class TestReferenceDTO(abstract_dto):
     def __init__(self):
         super().__init__()
         self.dto_field = "dto_value"
-    
-    def to_dto(self):
-        """Реализация метода to_dto для тестового DTO"""
-        return {
-            "dto_field": self.dto_field,
-            "id": self.id
-        }
 
 class TestReferenceConvertor(unittest.TestCase):
 
@@ -66,10 +59,8 @@ class TestReferenceConvertor(unittest.TestCase):
         result = self.convertor.convert(dto)
 
         # Проверка
-        self.assertIsInstance(result, dict)
-        self.assertIn("dto_field", result)
-        self.assertEqual(result["dto_field"], "dto_value")
-        self.assertIn("id", result)
+        self.assertIsInstance(result, abstract_dto)
+        self.assertEqual(result.dto_field, "dto_value")
 
     def test_convert_unconvertible_object(self):
         # Подготовка
