@@ -1,11 +1,12 @@
 {
-    "company": {
-        "name": "TechData",
-        "type_of_property": "OOOAB",
-        "inn": 123456789012,
-        "bank_account": 11122233344,
-        "correspondent_account": 55566677788,
-        "bik": 987654321
-    },
-    "response_format": "json"
+  "company": {
+    "name": "TechData",
+    "type_of_property": "OOOAB",
+    "inn": 123456789012,
+    "bank_account": 11122233344,
+    "correspondent_account": 55566677788,
+    "bik": 987654321
+  },
+  "response_format": "json",
+  "first_start": true
 }
