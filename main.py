@@ -241,12 +241,6 @@ def get_report(code, start, end):
         code (str): Код или название склада
         start (str): Дата начала периода в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС"
         end (str): Дата окончания периода в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС"
-        
-    Возвращает:
-        CSV отчет в виде текста или сообщение об ошибке
-        
-    Ошибки:
-        Сообщение об ошибке при неверном формате дат или коде склада
     """
     logger.info(f"Запрос отчета для склада '{code}' за период {start} - {end}")
     
@@ -273,8 +267,8 @@ def get_report(code, start, end):
         logger.warning(f"Склад с кодом '{code}' не найден")
         return "Неправильный код склада!"
     
-    # Создаем оборотно-сальдовую ведомость
-    osv = data_service.create_osv(start_date, finish_date, storage.unique_code)
+    # ИСПРАВЛЕНИЕ: передаем объект storage_model, а не storage.name
+    osv = data_service.create_osv(start_date, finish_date, storage)
     
     # Генерируем CSV отчет
     result = result_format.create(osv.rows)

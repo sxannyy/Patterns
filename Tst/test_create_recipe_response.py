@@ -17,14 +17,12 @@ from Src.start_service import start_service
 """
 
 class TestRecipeFiles(unittest.TestCase):
-    __start_service = start_service()
-    
-    def __init__(self, methodName="runTest"):
-        super().__init__(methodName)
-        self.__start_service.start()
+    def setUp(self):
+        self.svc = start_service()
+        self.svc.start()
+        self.repo = self.svc.repo
         self.test_output_dir = "test_output"
         
-    def setUp(self):
         # Подготовка
         if not os.path.exists(self.test_output_dir):
             os.makedirs(self.test_output_dir)
@@ -36,7 +34,7 @@ class TestRecipeFiles(unittest.TestCase):
 
     def test_create_recipe_csv_file(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Простые лепешки"]
+        recipe = self.repo.data[reposity.recipe_key()]["Простые лепешки"]
         filename = "простые_лепешки.csv"
         filepath = os.path.join(self.test_output_dir, filename)
 
@@ -63,7 +61,7 @@ class TestRecipeFiles(unittest.TestCase):
 
     def test_create_recipe_json_file(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Простые лепешки"]
+        recipe = self.repo.data[reposity.recipe_key()]["Простые лепешки"]
         filename = "простые_лепешки.json"
         filepath = os.path.join(self.test_output_dir, filename)
 
@@ -98,7 +96,7 @@ class TestRecipeFiles(unittest.TestCase):
 
     def test_create_recipe_markdown_file(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Простые лепешки"]
+        recipe = self.repo.data[reposity.recipe_key()]["Простые лепешки"]
         filename = "простые_лепешки.md"
         filepath = os.path.join(self.test_output_dir, filename)
 
@@ -125,7 +123,7 @@ class TestRecipeFiles(unittest.TestCase):
 
     def test_create_recipe_xml_file(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Простые лепешки"]
+        recipe = self.repo.data[reposity.recipe_key()]["Простые лепешки"]
         filename = "простые_лепешки.xml"
         filepath = os.path.join(self.test_output_dir, filename)
 
@@ -152,7 +150,7 @@ class TestRecipeFiles(unittest.TestCase):
 
     def test_create_all_recipe_formats(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Простые лепешки"]
+        recipe = self.repo.data[reposity.recipe_key()]["Простые лепешки"]
         formats = [
             ('csv', self.responder_csv),
             ('json', self.responder_json),
@@ -183,7 +181,7 @@ class TestRecipeFiles(unittest.TestCase):
 
     def test_recipe_content_consistency(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Простые лепешки"]
+        recipe = self.repo.data[reposity.recipe_key()]["Простые лепешки"]
         ingredients_to_check = ["Пшеничная мука", "Яйца куриные", "Молоко"]
         steps_to_check = ["Подготовка ингредиентов", "Замес теста", "Выпекание"]
 

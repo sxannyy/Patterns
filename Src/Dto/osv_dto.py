@@ -2,6 +2,8 @@ from Src.Core.abstract_dto import abstract_dto
 from datetime import datetime
 from typing import List, Dict
 
+from Src.Models.storage_model import storage_model
+
 class osv_dto(abstract_dto):
     
     """
@@ -11,7 +13,7 @@ class osv_dto(abstract_dto):
 
     __start_date: datetime = None
     __end_date: datetime = None
-    __storage: str = ""
+    __storage: storage_model = None
     __rows: List[Dict] = []
 
     @property
@@ -34,12 +36,12 @@ class osv_dto(abstract_dto):
         self.__end_date = value
 
     @property
-    def storage(self) -> str:
+    def storage(self) -> storage_model:
         """Возвращает название склада"""
         return self.__storage
     
     @storage.setter
-    def storage(self, value: str):
+    def storage(self, value: storage_model):
         """Устанавливает название склада"""
         self.__storage = value
 

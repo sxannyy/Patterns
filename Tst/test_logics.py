@@ -22,13 +22,11 @@ import json
 """
 
 class TestLogics(unittest.TestCase):
-    __start_service = start_service()
-
-    def __init__(self, methodName="runTest"):
-        super().__init__(methodName)
-        self.__start_service.start()
-
     def setUp(self):
+        self.svc = start_service()
+        self.svc.start()
+        self.repo = self.svc.repo
+
         self.factory = factory_entities()
         self.responder = response_csv()
         self.responder_json = response_json()
@@ -89,7 +87,7 @@ class TestLogics(unittest.TestCase):
 
     def test_create_single_recipe_csv(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
 
         # Действие
         result = self.responder.create(recipe)
@@ -111,7 +109,7 @@ class TestLogics(unittest.TestCase):
 
     def test_create_list_recipes_csv(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
         data = [recipe]
 
         # Действие
@@ -144,7 +142,7 @@ class TestLogics(unittest.TestCase):
 
     def test_create_single_recipe_json(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
 
         # Действие
         result = self.responder_json.create(recipe)
@@ -162,7 +160,7 @@ class TestLogics(unittest.TestCase):
 
     def test_create_list_recipes_json(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
         data = [recipe]
 
         # Действие
@@ -196,7 +194,7 @@ class TestLogics(unittest.TestCase):
 
     def test_create_single_recipe_markdown(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
 
         # Действие
         result = self.responder_markdown.create(recipe)
@@ -211,7 +209,7 @@ class TestLogics(unittest.TestCase):
 
     def test_create_list_recipes_markdown(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
         data = [recipe]
 
         # Действие
@@ -243,7 +241,7 @@ class TestLogics(unittest.TestCase):
 
     def test_create_single_recipe_xml(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
 
         # Действие
         result = self.responder_xml.create(recipe)
@@ -256,7 +254,7 @@ class TestLogics(unittest.TestCase):
 
     def test_create_list_recipes_xml(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
         data = [recipe]
 
         # Действие
@@ -268,7 +266,7 @@ class TestLogics(unittest.TestCase):
 
     def test_json_structure_validation(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
 
         # Действие
         result = self.responder_json.create(recipe)
@@ -290,7 +288,7 @@ class TestLogics(unittest.TestCase):
 
     def test_markdown_structure_validation(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
 
         # Действие
         result = self.responder_markdown.create(recipe)
@@ -303,7 +301,7 @@ class TestLogics(unittest.TestCase):
 
     def test_csv_structure_validation(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
 
         # Действие
         result = self.responder.create(recipe)
@@ -325,7 +323,7 @@ class TestLogics(unittest.TestCase):
 
     def test_xml_structure_validation(self):
         # Подготовка
-        recipe = self.__start_service.repo.data[reposity.recipe_key()]["Омлет с молоком"]
+        recipe = self.repo.data[reposity.recipe_key()]["Омлет с молоком"]
 
         # Действие
         result = self.responder_xml.create(recipe)

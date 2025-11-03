@@ -25,7 +25,7 @@ class settings_manager:
 
     __config_namefile: str = ""  # Путь к файлу конфигурации.
     __settings: settings_model = None  # Объект settings_model, хранящий конфигурацию.
-    __global_attributes: list = ["company", "response_format"]  # Список глобальных атрибутов settings_model.
+    __global_attributes: list = ["company", "response_format", "first_start"]  # Список глобальных атрибутов settings_model.
     __settings_dict: list = ["company"] # Список атрибутов settings_model, которые нужно конвертировать из словаря
 
     def __init__(self, config_filename: str):
@@ -93,6 +93,22 @@ class settings_manager:
         """
         return self.__settings.company
 
+    def is_first_start(self) -> bool:
+        """
+        Проверяет, является ли это первым запуском приложения.
+
+        Возвращает:
+            bool: True если первый запуск, иначе False
+        """
+        return getattr(self.__settings, 'first_start', True)
+
+    def set_first_start_completed(self):
+        """
+        Устанавливает флаг первого запуска в False и сохраняет настройки.
+        """
+        self.__settings.first_start = False
+        self.save_settings()
+
     def convert_to_settings(self, load_result: dict, key: str) -> bool:
         """
         Преобразует загруженный словарь в экземпляры доменных моделей (company_model).
@@ -151,6 +167,34 @@ class settings_manager:
             print(f"Ошибка при загрузке настроек: {e}") # Logging ошибки
             return False
 
+    def save_settings(self):
+        """
+        Сохраняет текущие настройки в файл конфигурации.
+        """
+        try:
+            settings_dict = {}
+            
+            # Сохраняем настройки компании
+            settings_dict["company"] = {
+                "name": self.__settings.company.name,
+                "type_of_property": self.__settings.company.type_of_property,
+                "inn": self.__settings.company.inn,
+                "bank_account": self.__settings.company.bank_account,
+                "correspondent_account": self.__settings.company.correspondent_account,
+                "bik": self.__settings.company.bik
+            }
+            
+            # Сохраняем остальные глобальные атрибуты
+            for attr in self.__global_attributes:
+                if attr != "company" and hasattr(self.__settings, attr):
+                    settings_dict[attr] = getattr(self.__settings, attr)
+            
+            with open(self.config_namefile, 'w', encoding='utf-8') as file:
+                json.dump(settings_dict, file, ensure_ascii=False, indent=2)
+                
+        except Exception as e:
+            print(f"Ошибка при сохранении настроек: {e}")
+
     def default(self):
         """
         Устанавливает настройки по умолчанию.  Используется при инициализации и в случае ошибок загрузки.
@@ -164,3 +208,5 @@ class settings_manager:
         self.__settings.company.bank_account = 0
         self.__settings.company.correspondent_account = 0
         self.__settings.company.bik = 0
+        self.__settings.response_format = "json"
+        self.__settings.first_start = True

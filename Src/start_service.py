@@ -9,7 +9,9 @@ from Src.Models.transaction_model import transaction_model
 from Src.reposity import reposity
 from Src.Models.measure_model import measure_model
 from Src.Models.recipe_model import recipe_model
+from Src.settings_manager import settings_manager
 import json
+import os
 
 class start_service:
     """
@@ -20,6 +22,7 @@ class start_service:
     - Инициализацию справочников (единицы измерения, группы продуктов)
     - Генерацию тестовых рецептов и ингредиентов
     - Предоставление доступа к данным через репозиторий
+    - Загрузку и сохранение данных в зависимости от настроек первого старта
 
     Основные функциональные блоки:
     1. Инициализация структур данных репозитория
@@ -27,12 +30,15 @@ class start_service:
     3. Формирование групп номенклатуры (специи, продукты животного происхождения, мука и крупы)
     4. Генерация базовых ингредиентов (сахар, мука, яйца, масло и др.)
     5. Создание демонстрационных рецептов (вафли, омлет, лепешки)
+    6. Управление первым запуском приложения
 
     Атрибуты:
         __repo (reposity): Центральный репозиторий для хранения всех данных приложения
+        __data_file (str): Имя файла для сохранения/загрузки данных
     """
 
     __repo: reposity = reposity()
+    __data_file: str = "app_data.json"
 
     def __init__(self):
         """
@@ -71,6 +77,81 @@ class start_service:
             reposity: Репозиторий со всеми данными приложения
         """
         return self.__repo
+
+    def load_data(self) -> bool:
+        """
+        Загружает данные из файла, если он существует.
+        
+        Возвращает:
+            bool: True если данные успешно загружены, иначе False
+        """
+        try:
+            if os.path.exists(self.__data_file):
+                with open(self.__data_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    
+                converter = convert_factory()
+                loaded_data = converter.convert_back(data["data"])
+                
+                # Восстанавливаем данные в репозиторий
+                self.__repo.data = loaded_data
+                print("Данные успешно загружены из файла")
+                return True
+            return False
+        except Exception as e:
+            print(f"Ошибка загрузки данных: {e}")
+            return False
+
+    def save_data(self) -> bool:
+        """
+        Сохраняет текущие данные в файл.
+        
+        Возвращает:
+            bool: True если данные успешно сохранены, иначе False
+        """
+        try:
+            self.dump(self.__data_file)
+            return True
+        except Exception as e:
+            print(f"Ошибка сохранения данных: {e}")
+            return False
+
+    def initialize_application(self, settings_mgr: settings_manager) -> bool:
+        """
+        Инициализирует приложение в зависимости от настроек первого старта.
+        
+        Аргументы:
+            settings_mgr (settings_manager): Менеджер настроек приложения
+            
+        Возвращает:
+            bool: True если инициализация прошла успешно
+            
+        Логика:
+            - Если first_start = True: создает начальные данные и сохраняет их
+            - Если first_start = False: загружает данные из файла
+            - Если файл данных не найден: создает новые данные
+        """
+        if settings_mgr.is_first_start():
+            print("Первый запуск приложения. Инициализация данных...")
+            # Создаем начальные данные
+            self.start()
+            # Сохраняем данные
+            if self.save_data():
+                # Устанавливаем флаг первого запуска в False
+                settings_mgr.set_first_start_completed()
+                print("Инициализация данных завершена")
+                return True
+            else:
+                print("Ошибка сохранения данных при первом запуске")
+                return False
+        else:
+            print("Загрузка существующих данных...")
+            if not self.load_data():
+                print("Файл данных не найден. Создание новых данных...")
+                self.start()
+                self.save_data()
+        
+        return True
 
     def __default_create_measure(self):
         """
@@ -382,7 +463,7 @@ class start_service:
             # Обработка возможных ошибок при записи файла
             print(f"Ошибка при выгрузке данных: {e}")
 
-    def create_osv(self, start_date: datetime, end_date: datetime, storage_id: str):
+    def create_osv(self, start_date: datetime, end_date: datetime, storage: storage_model):
         """
         Создает оборотно-сальдовую ведомость для указанного склада за период.
         
@@ -402,7 +483,7 @@ class start_service:
         nomenclatures = self.__repo.data[reposity.nomenclature_key()]
         
         # Получаем склад по идентификатору
-        storage = self.__repo.data[reposity.storage_key()][storage_id]
+        storage = self.__repo.data[reposity.storage_key()][storage.name]
         
         # Валидируем, что полученный объект является моделью склада
         validator.validate(storage, storage_model)

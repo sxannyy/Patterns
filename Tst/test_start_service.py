@@ -267,16 +267,18 @@ class TestStartService(unittest.TestCase):
         # Подготовка
         start_date = datetime(2025, 10, 1)
         end_date = datetime(2025, 10, 31)
-        storage_id = "Основной склад"
-
+        
+        # Получаем объект склада из репозитория
+        storage = self.__start_service.repo.data[reposity.storage_key()]["Основной склад"]
+        
         # Действия
-        osv = self.__start_service.create_osv(start_date, end_date, storage_id)
+        osv = self.__start_service.create_osv(start_date, end_date, storage)
 
         # Проверка
         self.assertIsInstance(osv, osv_model)
         self.assertEqual(osv.start_date, start_date)
         self.assertEqual(osv.end_date, end_date)
-        self.assertEqual(osv.storage.name, storage_id)
+        self.assertEqual(osv.storage.name, "Основной склад")  # Проверяем по имени объекта
         self.assertIsInstance(osv.rows, list)
 
     def test_check_dump_method(self):
