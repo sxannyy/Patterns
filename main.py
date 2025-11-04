@@ -79,7 +79,7 @@ def get_response(type):
     
     # Создаем генератор ответа и генерируем текст
     response = responses_factory.create(type)
-    recipe_data = data[reposity.recipe_key()]['Омлет с молоком']
+    recipe_data = data[reposity.recipe_key()]
     text = response().create(recipe_data)
     
     logger.info(f"Ответ успешно сгенерирован в формате: {type}")
@@ -267,7 +267,7 @@ def get_report(code, start, end):
         logger.warning(f"Склад с кодом '{code}' не найден")
         return "Неправильный код склада!"
     
-    # ИСПРАВЛЕНИЕ: передаем объект storage_model, а не storage.name
+    # Передаем объект storage_model
     osv = data_service.create_osv(start_date, finish_date, storage)
     
     # Генерируем CSV отчет

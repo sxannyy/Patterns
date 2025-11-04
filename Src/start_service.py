@@ -1,6 +1,10 @@
 from datetime import datetime
+import json
+import os
+
 from Src.Convertors.convert_factory import convert_factory
 from Src.Core.validator import validator
+from Src.Core.validator import argument_exception
 from Src.Models.nomenclature_group_model import nomenclature_group_model
 from Src.Models.nomenclature_model import nomenclature_model
 from Src.Models.osv_model import osv_model
@@ -10,8 +14,7 @@ from Src.reposity import reposity
 from Src.Models.measure_model import measure_model
 from Src.Models.recipe_model import recipe_model
 from Src.settings_manager import settings_manager
-import json
-import os
+from Src.Core.osv_builder import osv_builder
 
 class start_service:
     """
@@ -458,10 +461,9 @@ class start_service:
                 data_to_dump["data"] = converter.convert(self.__repo.data)
 
                 json.dump(data_to_dump, f, ensure_ascii=False, indent=2, default=str)
-            print(f"Данные успешно выгружены в файл: {filename}")
         except Exception as e:
             # Обработка возможных ошибок при записи файла
-            print(f"Ошибка при выгрузке данных: {e}")
+            raise argument_exception("Ошибка при выгрузке данных!")
 
     def create_osv(self, start_date: datetime, end_date: datetime, storage: storage_model):
         """
@@ -470,31 +472,33 @@ class start_service:
         Аргументы:
             start_date (datetime): Начальная дата периода
             end_date (datetime): Конечная дата периода
-            storage_id (str): Идентификатор склада
+            storage (storage_model): Объект склада, для которого создается ведомость
         
         Возвращает:
-            osv_model: Модель оборотно-сальдовой ведомости
-            
+            osv_build: Объект с построенной оборотно-сальдовой ведомостью
+        
         Ошибки:
-            Validation error: Если переданный объект склада не является storage_model
+            Validation error: Если переданный объект склада не является моделью storage_model
         """
         # Получаем транзакции и номенклатуру из репозитория
         transactions = self.__repo.data[reposity.transaction_key()]
         nomenclatures = self.__repo.data[reposity.nomenclature_key()]
         
-        # Получаем склад по идентификатору
-        storage = self.__repo.data[reposity.storage_key()][storage.name]
+        # Получаем объект склада по переданному экземпляру
+        # Предполагается, что репозиторий содержит объекты по ключам
+        storage_obj = self.__repo.data[reposity.storage_key()][storage.name]
         
         # Валидируем, что полученный объект является моделью склада
-        validator.validate(storage, storage_model)
+        validator.validate(storage_obj, storage_model)
         
         # Создаем модель оборотно-сальдовой ведомости
-        osv = osv_model.create(start_date, end_date, storage)
+        osv = osv_model.create(start_date, end_date, storage_obj)
+        osv_build = osv_builder(osv)
         
         # Генерируем строки ведомости на основе транзакций и номенклатуры
-        osv.generate_rows(transactions, nomenclatures)
+        osv_build.generate_rows(transactions, nomenclatures)
         
-        return osv
+        return osv_build
     
     def start(self):
         """

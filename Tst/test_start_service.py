@@ -1,5 +1,7 @@
 import unittest
 from datetime import datetime
+from Src.Core.osv_builder import osv_builder
+from Src.Core.validator import argument_exception
 from Src.Models.nomenclature_group_model import nomenclature_group_model
 from Src.Models.nomenclature_model import nomenclature_model
 from Src.reposity import reposity
@@ -275,10 +277,10 @@ class TestStartService(unittest.TestCase):
         osv = self.__start_service.create_osv(start_date, end_date, storage)
 
         # Проверка
-        self.assertIsInstance(osv, osv_model)
+        self.assertIsInstance(osv, osv_builder)
         self.assertEqual(osv.start_date, start_date)
         self.assertEqual(osv.end_date, end_date)
-        self.assertEqual(osv.storage.name, "Основной склад")  # Проверяем по имени объекта
+        self.assertEqual(osv.storage.name, "Основной склад")
         self.assertIsInstance(osv.rows, list)
 
     def test_check_dump_method(self):
@@ -303,12 +305,9 @@ class TestStartService(unittest.TestCase):
         # Подготовка
         invalid_filename = "/invalid/path/test_dump.json"
 
-        # Действия и Проверка
-        # Должен вывести сообщение об ошибке, но не падать
-        try:
+        # Проверка
+        with self.assertRaises(argument_exception):
             self.__start_service.dump(invalid_filename)
-        except Exception as e:
-            self.fail(f"dump method failed with exception: {e}")
 
     def test_check_repository_keys_completeness(self):
         # Подготовка
