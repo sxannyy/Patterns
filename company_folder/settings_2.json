@@ -7,5 +7,6 @@
         "correspondent_account": 88877766655,
         "bik": 123123123
     },
-    "response_format": "json"
+    "response_format": "json",
+    "first_start": true
 }
