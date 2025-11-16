@@ -453,7 +453,12 @@ def get_osv_filtered(storage_code, start_str, end_str):
     result_format = factory_entities().create("csv")()
     osv_dto_dict = result_format.create(osv.rows)
 
-    return jsonify(osv_dto_dict)
+    return  flask.Response(
+        response=osv_dto_dict,
+        status=200,
+        content_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment;filename=report.csv"}
+    )
 
 @app.errorhandler(404)
 def page_not_found(error):
