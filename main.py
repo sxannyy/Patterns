@@ -4,7 +4,11 @@ import flask
 from flask import abort, jsonify
 import logging
 
+from Src.Core.prototype import prototype
+from Src.Dto.filter_sorting_dto import filter_sorting_dto
 from Src.Logics.factory_entities import factory_entities
+from Src.Logics.prototype_report import prototype_report
+from Src.Models.osv_model import osv_model
 from Src.reposity import reposity
 from Src.start_service import start_service
 from Src.Convertors.convert_factory import convert_factory
@@ -41,7 +45,9 @@ def index():
             "references_list": "GET /api/references",
             "reference_by_name": "GET /api/references/<reference_name>",
             "create_dump": "POST /api/dump",
-            "report": "GET /report/<code>/<start>/<end>"
+            "report": "GET /report/<code>/<start>/<end>",
+            "filter": "POST /api/<string:domain_name>/filter",
+            "OSV": "POST /api/report/osv"
         }
     })
 
@@ -324,6 +330,135 @@ def get_dump():
             "status": "error",
             "message": f"Ошибка при выгрузке данных: {str(e)}"
         }), 500
+    
+@app.route("/api/<string:domain_name>/filter", methods=['POST'])
+def filter_domain(domain_name):
+    """
+    Фильтрация доменных моделей по DTO фильтрации.
+    
+    Аргументы:
+        domain_name: Название доменной модели для фильтрации. Допустимые значения:
+            - 'nomenclature' - номенклатура
+            - 'nomenclature_groups' - группы номенклатуры
+            - 'measure' - единицы измерения
+            - 'recipe' - рецепты  
+    Возвращает:
+        JSON: Отфильтрованный и отсортированный список объектов в формате DTO  
+    Ошибки:
+        400: Если запрос не содержит JSON или указан неизвестный тип доменной модели
+        404: Если указан неизвестный тип доменной модели
+        500: При внутренних ошибках обработки
+    """
+    if not flask.request.is_json:
+        abort(400, description="Ожидается JSON в теле запроса")
+
+    request_data = flask.request.get_json()
+
+    # Разбираем DTO фильтрации
+    fs_dto = filter_sorting_dto().create(request_data)
+
+    # Маппинг типа в ключ репозитория
+    repo_key_map = {
+        "nomenclature": reposity.nomenclature_key(),
+        "group": reposity.nomenclature_group_key(),
+        "measure": reposity.measure_key(),
+        "recipe": reposity.recipe_key(),
+    }
+
+    if domain_name not in repo_key_map:
+        abort(404, description=f"Неизвестный тип доменной модели: {domain_name}")
+
+    repo_key = repo_key_map[domain_name]
+    domain_dict = data.get(repo_key, {})
+
+    items = list(domain_dict.values())
+
+    # Оборачиваем в прототип
+    proto = prototype_report(items)
+
+    # Последовательно применяем все фильтры
+    for filter in fs_dto.filters:
+        proto = prototype_report.filter(proto, filter)
+
+    result_items = proto.data
+
+    # Сортировка
+    for sort_field in reversed(fs_dto.sorting):
+        result_items.sort(
+            key=lambda obj: prototype.get_nested_value(obj, sort_field) or ""
+        )
+
+    # Конвертируем в JSON через convert_factory
+    converter = convert_factory()
+    result = converter.convert_list(result_items)
+
+    return jsonify(result)
+
+@app.route("/report/<storage_code>/<start_str>/<end_str>", methods=['POST'])
+def get_osv_filtered(storage_code, start_str, end_str):
+    """
+    Формирование ОСВ (Оборотно-сальдовой ведомости) с учетом DTO фильтрации.
+    
+    Возвращает:
+        JSON: ОСВ в формате CSV с отфильтрованными и отсортированными данными
+        
+    Ошибки:
+        400: Если запрос не содержит JSON или отсутствуют обязательные параметры
+        404: Если склад не найден
+        500: При внутренних ошибках формирования отчета
+    """
+    if not flask.request.is_json:
+        abort(400, description="Ожидается JSON в теле запроса")
+
+    req = flask.request.get_json()
+
+    if not storage_code or not start_str or not end_str:
+        abort(400, description="Нужно указать storage, start и end")
+
+    try:
+        start_date = datetime.strptime(start_str, "%Y-%m-%d %H:%M:%S")
+        end_date = datetime.strptime(end_str, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        abort(400, description="Неверный формат дат. Ожидается: ГГГГ-ММ-ДД ЧЧ:ММ:СС")
+
+    # Ищем склад по имени (как в GET /report/...)
+    storages = data[reposity.storage_key()]
+    storage = None
+    for item in storages.values():
+        if item.name == storage_code or item.unique_code == storage_code:
+            storage = item
+            break
+
+    if storage is None:
+        abort(404, description="Склад не найден")
+
+    # Создаем ОСВ через существующий сервис
+    osv_build = data_service.create_osv(start_date, end_date, storage)
+
+    rows = osv_build.rows
+
+    # DTO фильтрации
+    fs_dto = filter_sorting_dto().create(req)
+
+    proto = prototype_report(rows)
+    for filter in fs_dto.filters:
+        proto = prototype_report.filter(proto, filter)
+
+    filtered_rows = proto.data
+
+    # Формируем модель ОСВ с отфильтрованными строками
+    osv = osv_model.create(start_date, end_date, storage)
+    osv.rows = filtered_rows
+
+    result_format = factory_entities().create("csv")()
+    osv_dto_dict = result_format.create(osv.rows)
+
+    return  flask.Response(
+        response=osv_dto_dict,
+        status=200,
+        content_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment;filename=report.csv"}
+    )
 
 @app.errorhandler(404)
 def page_not_found(error):
