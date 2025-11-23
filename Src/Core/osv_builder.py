@@ -3,6 +3,7 @@ from typing import List
 from Src.Core.abstract_model import abstract_model
 from Src.Dto.filter_dto import filter_dto
 from Src.Logics.prototype_report import prototype_report
+from Src.Models.balance_model import balance_model
 from Src.Models.nomenclature_model import nomenclature_model
 from Src.Core.validator import operation_exception, validator
 from Src.Models.osv_model import osv_model
@@ -121,123 +122,194 @@ class osv_builder(abstract_model):
         # Если не найдено - генерируем исключение
         raise operation_exception("Элемент ОСВ не найден!")
 
-    def generate_rows(self, transactions: list[transaction_model], nomenclatures: list[nomenclature_model]):
+    def generate_rows(
+        self,
+        transactions: dict[str, transaction_model],
+        nomenclatures: dict[str, nomenclature_model],
+        balance_cache: dict[str, balance_model] | None = None,
+        block_date: datetime | None = None
+    ):
         """
         Генерирует строки ведомости на основе транзакций и справочника номенклатур.
-        
+
         Алгоритм:
         1. Фильтрация транзакций по складу
-        2. Разделение транзакций на периоды (до начала и внутри периода отчета)
+        2. Разделение транзакций на периоды:
+           - часть, которая попадает в начальный остаток
+           - часть, которая попадает в обороты за период
         3. Для каждой номенклатуры рассчитываются:
-        - Остаток на начало периода
-        - Обороты за период (приход и расход)
-        - Остаток на конец периода
-        
+           - Остаток на начало периода (с учетом кэша, если задан block_date)
+           - Обороты за период (приход и расход)
+           - Остаток на конец периода
+
         Аргументы:
-            transactions: Список всех транзакций
-            nomenclatures: Справочник номенклатур в формате словаря
+            transactions: Все транзакции (dict[unique_code -> transaction_model])
+            nomenclatures: Все номенклатуры (dict[name/код -> nomenclature_model])
+            balance_cache: Кэш остатков на дату block_date.
+                Ключ: "<storage.unique_code>:<nomenclature.unique_code>"
+            block_date: Дата блокировки кэша.
+                Если None — кэш не используется.
         """
-        
-        # Создаем прототипы для работы с фильтрами
-        # Прототипы позволяют применять фильтры к коллекциям объектов
+
+        # Валидация входных данных
+        validator.validate(transactions, dict)
+        validator.validate(nomenclatures, dict)
+
+        if block_date is not None:
+            validator.validate(block_date, datetime)
+        if balance_cache is not None:
+            validator.validate(balance_cache, dict)
+
+        # Есть ли вообще кэш?
+        use_cache = balance_cache is not None and block_date is not None
+
+        # 1. Прототипы для работы с фильтрами
         transactions_prototype = prototype_report(transactions)
-        nomenclatures_prototype = prototype_report(list(nomenclatures.values()))
-        
-        # 1. Фильтрация транзакций по складу - оставляем только транзакции нужного склада
+
+        # 2. Фильтруем транзакции по складу
         filter_storage = filter_dto().create(
             {
-                "filter_name": "storage.name",  # Поле для фильтрации
-                "value": self.__storage.name,   # Название склада
-                "type": "EQUALS"                # Точное совпадение
+                "filter_name": "storage.name",
+                "value": self.__storage.name,
+                "type": "EQUALS",
             }
         )
         transactions_by_storage = transactions_prototype.filter(
             transactions_prototype,
-            filter_storage
+            filter_storage,
         )
 
-        # 2. Фильтр транзакций до начала периода - для расчета разницы между приходомами и расходами счета
+        # --- 3. Определяем эффективную дату начала оборотов ---
+        # Если есть block_date, то обороты считаем с max(start_date, block_date)
+        if use_cache:
+            effective_start = max(self.__start_date, block_date)
+            date_from_for_start = block_date
+        else:
+            # Без кэша — всё, как раньше: начиная "с начала времён"
+            effective_start = self.__start_date
+            date_from_for_start = datetime.min
+
+        # Транзакции, которые попадут в начальный остаток:
+        # - если есть кэш: [block_date; effective_start)
+        # - если нет кэша: [datetime.min; start_date)
         filter_before_period = filter_dto().create(
             {
                 "filter_name": "date",
-                "value": (datetime.min, self.__start_date),  # Диапазон от минимальной даты до начала периода
-                "type": "IN_RANGE"
+                "value": (date_from_for_start, effective_start),
+                "type": "IN_RANGE",
             }
         )
         transactions_before_period = transactions_by_storage.filter(
             transactions_by_storage,
-            filter_before_period
+            filter_before_period,
         )
 
-        # 3. Фильтр транзакций внутри отчетного периода. Рассматриваются операции за период [start_date; end_date]
+        # Транзакции, которые попадут в обороты за период:
+        # всегда [effective_start; end_date]
         filter_in_period = filter_dto().create(
             {
                 "filter_name": "date",
-                "value": (self.__start_date, self.__end_date),  # Отчетный период
-                "type": "IN_RANGE"
+                "value": (effective_start, self.__end_date),
+                "type": "IN_RANGE",
             }
         )
         transactions_in_period = transactions_by_storage.filter(
             transactions_by_storage,
-            filter_in_period
+            filter_in_period,
         )
 
-        # 4. Инициализация строк ОСВ - для каждой номенклатуры создаем строку
+        # 4. Формируем строки ОСВ по каждой номенклатуре
         self.__rows = []
+
         for nomenclature in nomenclatures.values():
-            # Фильтруем транзакции по конкретной номенклатуре до периода
+            # Фильтры по номенклатуре
             filter_nomenclature = filter_dto().create(
                 {
                     "filter_name": "nomenclature",
-                    "value": nomenclature,  # Текущая номенклатура
-                    "type": "EQUALS"
+                    "value": nomenclature,
+                    "type": "EQUALS",
                 }
             )
+
             nomenclature_before = transactions_before_period.filter(
                 transactions_before_period,
-                filter_nomenclature
+                filter_nomenclature,
             )
-            
-            # Фильтруем транзакции по номенклатуре внутри периода
             nomenclature_in_period = transactions_in_period.filter(
                 transactions_in_period,
-                filter_nomenclature
+                filter_nomenclature,
             )
-            
-            # Создаем строку ОСВ для этой номенклатуры
+
+            # Строка ОСВ в базовой единице измерения номенклатуры
+            base_measure = (
+                nomenclature.measure.base_measure or nomenclature.measure
+            )
             osv_row = osv_unit_model.create_default(
                 nomenclature,
-                nomenclature.measure.base_measure or nomenclature.measure  # Базовая единица измерения
+                base_measure,
             )
-            
-            # Рассчитываем начальный остаток на основе транзакций до периода
+
+            # --- 4.1. Начальный остаток с учетом кэша и транзакций до effective_start ---
             start_balance = 0.0
+
+            if use_cache:
+                cache_key = f"{self.__storage.unique_code}:{nomenclature.unique_code}"
+                balance_item = balance_cache.get(cache_key)
+
+                if isinstance(balance_item, balance_model):
+                    cached_balance = balance_item.end_balance
+
+                    # На всякий случай приводим к мере строки, если они отличаются
+                    if balance_item.measure != osv_row.measure:
+                        if (
+                            balance_item.measure.base_measure
+                            and balance_item.measure.base_measure == osv_row.measure
+                        ):
+                            cached_balance *= balance_item.measure.conversion_factor
+                        elif (
+                            osv_row.measure.base_measure
+                            and osv_row.measure.base_measure == balance_item.measure
+                        ):
+                            cached_balance /= osv_row.measure.conversion_factor
+
+                    start_balance += cached_balance
+
+            # Добавляем операции до effective_start
             for transaction in nomenclature_before.data:
                 quantity = transaction.quantity
-                # Конвертируем в базовые единицы измерения если нужно
-                if transaction.measure.base_measure and transaction.measure.base_measure == osv_row.measure:
+
+                # Приводим к базовой единице
+                if (
+                    transaction.measure.base_measure
+                    and transaction.measure.base_measure == osv_row.measure
+                ):
                     quantity *= transaction.measure.conversion_factor
-                start_balance += quantity  # Суммируем все операции
-            
-            # Рассчитываем обороты за период
-            income = 0.0   # Приход (положительные количества)
-            outcome = 0.0  # Расход (отрицательные количества, берем по модулю)
+
+                start_balance += quantity
+
+            # --- 4.2. Обороты за период ---
+            income = 0.0
+            outcome = 0.0
+
             for transaction in nomenclature_in_period.data:
                 quantity = transaction.quantity
-                # Конвертируем в базовые единицы измерения
-                if transaction.measure.base_measure and transaction.measure.base_measure == osv_row.measure:
+
+                # Приводим к базовой единице
+                if (
+                    transaction.measure.base_measure
+                    and transaction.measure.base_measure == osv_row.measure
+                ):
                     quantity *= transaction.measure.conversion_factor
-                
-                # Разделяем на приход и расход
+
                 if quantity > 0:
                     income += quantity
                 else:
-                    outcome += abs(quantity)  # Берем модуль для расхода
-            
-            # Устанавливаем рассчитанные значения в строку ОСВ
-            osv_row.start_balance = start_balance                    # Стартовый счет
-            osv_row.income = income                                  # Приход за период
-            osv_row.outcome = outcome                                # Расход за период
-            osv_row.end_balance = start_balance + income - outcome   # Конечный счет
-            
+                    outcome += abs(quantity)
+
+            # --- 4.3. Заполняем строку ОСВ ---
+            osv_row.start_balance = start_balance
+            osv_row.income = income
+            osv_row.outcome = outcome
+            osv_row.end_balance = start_balance + income - outcome
+
             self.__rows.append(osv_row)
