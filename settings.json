@@ -8,5 +8,6 @@
     "bik": 987654321
   },
   "response_format": "json",
-  "first_start": true
+  "first_start": true,
+  "block_date": "2026-12-30"
 }

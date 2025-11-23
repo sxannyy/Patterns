@@ -93,7 +93,8 @@ class TestReposity(unittest.TestCase):
             "nomenclature",
             "nomenclature_groups",
             "storages",
-            "transactions"
+            "transactions",
+            "balances"
         ]
 
         # Действие
