@@ -202,11 +202,9 @@ class start_service:
                 
                 # Восстанавливаем данные в репозиторий
                 self.__repo.data = loaded_data
-                print("Данные успешно загружены из файла")
                 return True
             return False
         except Exception as e:
-            print(f"Ошибка загрузки данных: {e}")
             return False
 
     def save_data(self) -> bool:
@@ -220,7 +218,6 @@ class start_service:
             self.dump(self.__data_file)
             return True
         except Exception as e:
-            print(f"Ошибка сохранения данных: {e}")
             return False
 
     def initialize_application(self, settings_mgr: settings_manager) -> bool:
@@ -239,22 +236,17 @@ class start_service:
             - Если файл данных не найден: создает новые данные
         """
         if settings_mgr.is_first_start():
-            print("Первый запуск приложения. Инициализация данных...")
             # Создаем начальные данные
             self.start()
             # Сохраняем данные
             if self.save_data():
                 # Устанавливаем флаг первого запуска в False
                 settings_mgr.set_first_start_completed()
-                print("Инициализация данных завершена")
                 return True
             else:
-                print("Ошибка сохранения данных при первом запуске")
                 return False
         else:
-            print("Загрузка существующих данных...")
             if not self.load_data():
-                print("Файл данных не найден. Создание новых данных...")
                 self.start()
                 self.save_data()
         
