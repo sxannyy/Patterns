@@ -160,13 +160,12 @@ class osv_builder(abstract_model):
         if balance_cache is not None:
             validator.validate(balance_cache, dict)
 
-        # Есть ли вообще кэш?
         use_cache = balance_cache is not None and block_date is not None
 
-        # 1. Прототипы для работы с фильтрами
+        # Прототипы для работы с фильтрами
         transactions_prototype = prototype_report(transactions)
 
-        # 2. Фильтруем транзакции по складу
+        # Фильтруем транзакции по складу
         filter_storage = filter_dto().create(
             {
                 "filter_name": "storage.name",
@@ -179,7 +178,7 @@ class osv_builder(abstract_model):
             filter_storage,
         )
 
-        # --- 3. Определяем эффективную дату начала оборотов ---
+        # --- Определяем эффективную дату начала оборотов ---
         # Если есть block_date, то обороты считаем с max(start_date, block_date)
         if use_cache:
             effective_start = max(self.__start_date, block_date)
@@ -218,7 +217,7 @@ class osv_builder(abstract_model):
             filter_in_period,
         )
 
-        # 4. Формируем строки ОСВ по каждой номенклатуре
+        # Формируем строки ОСВ по каждой номенклатуре
         self.__rows = []
 
         for nomenclature in nomenclatures.values():
@@ -249,7 +248,7 @@ class osv_builder(abstract_model):
                 base_measure,
             )
 
-            # --- 4.1. Начальный остаток с учетом кэша и транзакций до effective_start ---
+            # --- Начальный остаток с учетом кэша и транзакций ---
             start_balance = 0.0
 
             if use_cache:
@@ -274,7 +273,7 @@ class osv_builder(abstract_model):
 
                     start_balance += cached_balance
 
-            # Добавляем операции до effective_start
+            # Добавляем операции
             for transaction in nomenclature_before.data:
                 quantity = transaction.quantity
 
@@ -287,7 +286,7 @@ class osv_builder(abstract_model):
 
                 start_balance += quantity
 
-            # --- 4.2. Обороты за период ---
+            # --- Обороты за период ---
             income = 0.0
             outcome = 0.0
 
@@ -306,7 +305,7 @@ class osv_builder(abstract_model):
                 else:
                     outcome += abs(quantity)
 
-            # --- 4.3. Заполняем строку ОСВ ---
+            # --- Заполняем строку ОСВ ---
             osv_row.start_balance = start_balance
             osv_row.income = income
             osv_row.outcome = outcome

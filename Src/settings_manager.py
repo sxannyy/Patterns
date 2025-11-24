@@ -150,25 +150,21 @@ class settings_manager:
             with open(self.config_namefile, 'r', encoding='utf-8') as file:
                 data = json.load(file)
 
-            # --- 1. Проверяем ОБЯЗАТЕЛЬНЫЕ ключи ---
-            # block_date считаем необязательным (для обратной совместимости)
-            required_keys = ["company", "response_format", "first_start", "block_date"]
+            # --- Проверяем ОБЯЗАТЕЛЬНЫЕ ключи ---
+            required_keys = ["company", "response_format", "first_start"]
             for key in required_keys:
                 if key not in data.keys():
                     return False
 
-            # --- 2. Создаём settings_model ---
+            # --- Создаём settings_model ---
             self.__settings = settings_model()
 
-            # --- 3. Заполняем атрибуты ---
+            # --- Заполняем атрибуты ---
             for key in self.__global_attributes:
-                # company — через convert_to_settings
                 if key in self.__settings_dict:
                     if not self.convert_to_settings(data, key):
                         return False
                     continue
-
-                # block_date — особый случай
                 if key == "block_date":
                     raw = data.get("block_date", None)
 
@@ -176,17 +172,12 @@ class settings_manager:
                         # нет даты блокировки
                         self.__settings.block_date = None
                     else:
-                        # Пытаемся распарсить строку
-                        # Поддержим оба формата: "YYYY-MM-DD" и "YYYY-MM-DD HH:MM:SS"
                         try:
                             if len(raw) == 10:
-                                # "2024-01-01"
                                 bd = datetime.strptime(raw, "%Y-%m-%d")
                             else:
-                                # "2024-01-01 00:00:00"
                                 bd = datetime.strptime(raw, "%Y-%m-%d %H:%M:%S")
                         except ValueError:
-                            # Некорректный формат даты — считаем ошибкой загрузки
                             return False
 
                         self.__settings.block_date = bd
