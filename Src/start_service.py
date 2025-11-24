@@ -46,9 +46,9 @@ class start_service:
     """
 
     __repo: reposity = reposity()
-    __data_file: str = "settings.json"
+    __data_file: str = "data_dump.json"
     __block_date: datetime = None
-    __balance_cache: list[balance_model] = {}
+    __balance_cache: dict[str, balance_model] = {}
 
     def __init__(self):
         """
@@ -133,12 +133,14 @@ class start_service:
         # Если дата блокировки не задана — очищаем кэш и выходим
         if self.__block_date is None:
             self.__balance_cache = {}
+            self.__repo.data.pop("balances", None)
             return
 
         # Берём данные из репозитория
         transactions = self.__repo.data.get(reposity.transaction_key(), {})
         if not transactions:
             self.__balance_cache = {}
+            self.__repo.data["balances"] = self.__balance_cache
             return
 
         balance_cache: dict[str, balance_model] = {}
@@ -185,6 +187,8 @@ class start_service:
             if value.end_balance != 0.0
         }
 
+        self.__repo.data["balances"] = self.__balance_cache
+
     def load_data(self) -> bool:
         """
         Загружает данные из файла, если он существует.
@@ -202,6 +206,8 @@ class start_service:
                 
                 # Восстанавливаем данные в репозиторий
                 self.__repo.data = loaded_data
+
+                self.__balance_cache = self.__repo.data.get("balances", {})
                 return True
             return False
         except Exception as e:
@@ -238,6 +244,11 @@ class start_service:
         if settings_mgr.is_first_start():
             # Создаем начальные данные
             self.start()
+
+            block_date = getattr(settings_mgr.settings, "block_date", None)
+            if block_date is not None:
+                self.block_date = block_date
+
             # Сохраняем данные
             if self.save_data():
                 # Устанавливаем флаг первого запуска в False

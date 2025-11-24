@@ -471,11 +471,15 @@ def set_block_date():
     Установить или изменить дату блокировки (block_date) в настройках.
 
     Тело запроса (JSON):
-    { "block_date": "ГГГГ-ММ-ДД ЧЧ:ММ:СС" | null }
+    {
+        "block_date": "ГГГГ-ММ-ДД ЧЧ:ММ:СС" | null
+    }
 
     Логика:
-        - Если block_date = null или отсутствует - дата блокировки сбрасывается (None).
-        - Если указана строка - парсим в datetime и передаём в start_service.block_date.
+        - Если block_date = null или отсутствует — дата блокировки сбрасывается (None),
+          кэш очищается, данные и настройки сохраняются.
+        - Если указана строка — парсим в datetime, устанавливаем в start_service.block_date
+          (пересчитывается кэш), сохраняем данные (dump) и обновляем settings.json.
     """
     if not flask.request.is_json:
         abort(400, description="Ожидается JSON в теле запроса")
@@ -486,7 +490,17 @@ def set_block_date():
     # Сброс даты блокировки
     if block_date_str in (None, "", "null"):
         logger.info("Сброс даты блокировки (block_date = None)")
-        setattr(data_service, "block_date", None)
+
+        # Обновляем сервис
+        data_service.block_date = None
+
+        # Обновляем настройки
+        settings_mgr.settings.block_date = None
+        settings_mgr.save_settings()
+
+        # Сохраняем текущие данные (без кэша)
+        data_service.save_data()
+
         return jsonify({
             "status": "success",
             "block_date": None
@@ -500,7 +514,16 @@ def set_block_date():
         abort(400, description="Неверный формат даты. Ожидается: ГГГГ-ММ-ДД ЧЧ:ММ:СС")
 
     logger.info(f"Установка новой даты блокировки: {block_date_str}")
-    setattr(data_service, "block_date", new_block_date)
+
+    # 1. Обновляем сервис (пересчёт кэша остатков)
+    data_service.block_date = new_block_date
+
+    # 2. Обновляем настройки
+    settings_mgr.settings.block_date = new_block_date
+    settings_mgr.save_settings()
+
+    # 3. Автоматически сохраняем все данные (включая кэш) в data_dump / app_data.json
+    data_service.save_data()
 
     return jsonify({
         "status": "success",
