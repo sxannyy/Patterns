@@ -1,10 +1,13 @@
-from datetime import datetime
+from datetime import date, datetime
 import json
 import os
 
 from Src.Convertors.convert_factory import convert_factory
 from Src.Core.validator import validator
 from Src.Core.validator import argument_exception
+from Src.Dto.filter_dto import filter_dto
+from Src.Logics.prototype_report import prototype_report
+from Src.Models.balance_model import balance_model
 from Src.Models.nomenclature_group_model import nomenclature_group_model
 from Src.Models.nomenclature_model import nomenclature_model
 from Src.Models.osv_model import osv_model
@@ -38,10 +41,14 @@ class start_service:
     Атрибуты:
         __repo (reposity): Центральный репозиторий для хранения всех данных приложения
         __data_file (str): Имя файла для сохранения/загрузки данных
+        __block_date (datetime): Дата блокировки
+        __balance_cache (list[balance_model]): Кэш-список баланса остатков
     """
 
     __repo: reposity = reposity()
-    __data_file: str = "app_data.json"
+    __data_file: str = "data_dump.json"
+    __block_date: datetime = None
+    __balance_cache: dict[str, balance_model] = {}
 
     def __init__(self):
         """
@@ -54,6 +61,7 @@ class start_service:
         - Рецептов (recipe_key)
         - Складов (storage_key)
         - Транзакций (transaction_key)
+        - Остатков (balance_key)
         """
         self.__repo.initalize()
 
@@ -80,6 +88,106 @@ class start_service:
             reposity: Репозиторий со всеми данными приложения
         """
         return self.__repo
+    
+    @property
+    def balance_cache(self) -> dict[str, balance_model]:
+        """Возвращает текущий кэш остатков."""
+        return self.__balance_cache
+
+
+    @property
+    def block_date(self) -> datetime | None:
+        """
+        Возвращает дату блокировки кэша остатков.
+        Если None — кэш не используется.
+        """
+        return self.__block_date
+
+    @block_date.setter
+    def block_date(self, value: datetime | None):
+        """
+        Устанавливает дату блокировки кэша остатков.
+        При установке даты пересчитывает кэш остатков на указанную дату.
+        """
+        if value is not None:
+            validator.validate(value, datetime)
+
+        self.__block_date = value
+        # Пересчитываем кэш при каждом изменении даты
+        self.__generate_balance_cache()
+
+    def __generate_balance_cache(self):
+        """
+        Генерирует кэш остатков (balance_model) на дату self.__block_date.
+
+        Кэш хранится в виде словаря:
+            key: "<storage.unique_code>:<nomenclature.unique_code>"
+            value: balance_model с полями:
+                - nomenclature
+                - storage
+                - measure (базовая единица номенклатуры)
+                - end_balance (остаток на дату block_date)
+                - block_date
+        """
+
+        # Если дата блокировки не задана — очищаем кэш и выходим
+        if self.__block_date is None:
+            self.__balance_cache = {}
+            self.__repo.data.pop("balances", None)
+            return
+
+        # Берём данные из репозитория
+        transactions = self.__repo.data.get(reposity.transaction_key(), {})
+        if not transactions:
+            self.__balance_cache = {}
+            self.__repo.data["balances"] = self.__balance_cache
+            return
+
+        balance_cache: dict[str, balance_model] = {}
+
+        for tr in transactions.values():
+            # Берём только транзакции не позже даты блокировки
+            if tr.date > self.__block_date:
+                continue
+
+            storage = tr.storage
+            nomenclature = tr.nomenclature
+
+            # Базовая единица номенклатуры
+            base_measure = nomenclature.measure.base_measure or nomenclature.measure
+
+            qty = tr.quantity
+
+            # Приводим количество к базовой единице
+            if tr.measure.base_measure and tr.measure.base_measure == base_measure:
+                qty *= tr.measure.conversion_factor
+
+            # Ключ кэша: "<storage_id>:<nomenclature_id>"
+            cache_key = f"{storage.unique_code}:{nomenclature.unique_code}"
+
+            # Если по этой паре ещё нет записи в кэше - создаём
+            if cache_key not in balance_cache:
+                balance_item = balance_model.create(
+                    nomenclature=nomenclature,
+                    measure=base_measure,
+                    end_balance=0.0,
+                    block_date=self.__block_date
+                )
+                balance_item.storage = storage
+                balance_cache[cache_key] = balance_item
+
+            # Наращиваем остаток
+            balance_cache[cache_key].end_balance = (
+                balance_cache[cache_key].end_balance + qty
+            )
+
+        self.__balance_cache = {
+            key: value
+            for key, value in balance_cache.items()
+            if value.end_balance != 0.0
+        }
+
+        self.__repo.data["balances"] = self.__balance_cache
 
     def load_data(self) -> bool:
         """
@@ -98,11 +206,11 @@ class start_service:
                 
                 # Восстанавливаем данные в репозиторий
                 self.__repo.data = loaded_data
-                print("Данные успешно загружены из файла")
+
+                self.__balance_cache = self.__repo.data.get("balances", {})
                 return True
             return False
         except Exception as e:
-            print(f"Ошибка загрузки данных: {e}")
             return False
 
     def save_data(self) -> bool:
@@ -116,7 +224,6 @@ class start_service:
             self.dump(self.__data_file)
             return True
         except Exception as e:
-            print(f"Ошибка сохранения данных: {e}")
             return False
 
     def initialize_application(self, settings_mgr: settings_manager) -> bool:
@@ -135,22 +242,22 @@ class start_service:
             - Если файл данных не найден: создает новые данные
         """
         if settings_mgr.is_first_start():
-            print("Первый запуск приложения. Инициализация данных...")
             # Создаем начальные данные
             self.start()
+
+            block_date = getattr(settings_mgr.settings, "block_date", None)
+            if block_date is not None:
+                self.block_date = block_date
+
             # Сохраняем данные
             if self.save_data():
                 # Устанавливаем флаг первого запуска в False
                 settings_mgr.set_first_start_completed()
-                print("Инициализация данных завершена")
                 return True
             else:
-                print("Ошибка сохранения данных при первом запуске")
                 return False
         else:
-            print("Загрузка существующих данных...")
             if not self.load_data():
-                print("Файл данных не найден. Создание новых данных...")
                 self.start()
                 self.save_data()
         
@@ -496,7 +603,12 @@ class start_service:
         osv_build = osv_builder(osv)
         
         # Генерируем строки ведомости на основе транзакций и номенклатуры
-        osv_build.generate_rows(transactions, nomenclatures)
+        osv_build.generate_rows(
+            transactions=transactions,
+            nomenclatures=nomenclatures,
+            balance_cache=self.__balance_cache,
+            block_date=self.__block_date,
+        )
         
         return osv_build
     

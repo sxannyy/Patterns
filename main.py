@@ -8,8 +8,10 @@ from Src.Core.prototype import prototype
 from Src.Dto.filter_sorting_dto import filter_sorting_dto
 from Src.Logics.factory_entities import factory_entities
 from Src.Logics.prototype_report import prototype_report
+from Src.Models.balance_model import balance_model
 from Src.Models.osv_model import osv_model
 from Src.reposity import reposity
+from Src.settings_manager import settings_manager
 from Src.start_service import start_service
 from Src.Convertors.convert_factory import convert_factory
 
@@ -47,7 +49,10 @@ def index():
             "create_dump": "POST /api/dump",
             "report": "GET /report/<code>/<start>/<end>",
             "filter": "POST /api/<string:domain_name>/filter",
-            "OSV": "POST /api/report/osv"
+            "OSV": "POST /api/report/osv",
+            "set_block_date": "POST /api/settings/block-date",
+            "get_block_date": "GET /api/settings/block-date",
+            "balances_on_date": "GET /api/balances?date=YYYY-MM-DD%%20HH:MM:SS[&storage=...]"
         }
     })
 
@@ -460,6 +465,197 @@ def get_osv_filtered(storage_code, start_str, end_str):
         headers={"Content-Disposition": "attachment;filename=report.csv"}
     )
 
+@app.route("/api/settings/block-date", methods=['POST'])
+def set_block_date():
+    """
+    Установить или изменить дату блокировки (block_date) в настройках.
+
+    Тело запроса (JSON):
+    {
+        "block_date": "ГГГГ-ММ-ДД ЧЧ:ММ:СС" | null
+    }
+
+    Логика:
+        - Если block_date = null или отсутствует — дата блокировки сбрасывается (None),
+          кэш очищается, данные и настройки сохраняются.
+        - Если указана строка — парсим в datetime, устанавливаем в start_service.block_date
+          (пересчитывается кэш), сохраняем данные (dump) и обновляем settings.json.
+    """
+    if not flask.request.is_json:
+        abort(400, description="Ожидается JSON в теле запроса")
+
+    req = flask.request.get_json()
+    block_date_str = req.get("block_date", None)
+
+    # Сброс даты блокировки
+    if block_date_str in (None, "", "null"):
+        logger.info("Сброс даты блокировки (block_date = None)")
+
+        # Обновляем сервис
+        data_service.block_date = None
+
+        # Обновляем настройки
+        settings_mgr.settings.block_date = None
+        settings_mgr.save_settings()
+
+        # Сохраняем текущие данные (без кэша)
+        data_service.save_data()
+
+        return jsonify({
+            "status": "success",
+            "block_date": None
+        }), 200
+
+    # Установка новой даты блокировки
+    try:
+        new_block_date = datetime.strptime(block_date_str, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        logger.error(f"Неверный формат даты блокировки: {block_date_str}")
+        abort(400, description="Неверный формат даты. Ожидается: ГГГГ-ММ-ДД ЧЧ:ММ:СС")
+
+    logger.info(f"Установка новой даты блокировки: {block_date_str}")
+
+    # 1. Обновляем сервис (пересчёт кэша остатков)
+    data_service.block_date = new_block_date
+
+    # 2. Обновляем настройки
+    settings_mgr.settings.block_date = new_block_date
+    settings_mgr.save_settings()
+
+    # 3. Автоматически сохраняем все данные (включая кэш) в data_dump / app_data.json
+    data_service.save_data()
+
+    return jsonify({
+        "status": "success",
+        "block_date": block_date_str
+    }), 200
+
+@app.route("/api/settings/block-date", methods=['GET'])
+def get_block_date():
+    """
+    Получить текущую дату блокировки (block_date) из сервиса.
+
+    Возвращает:
+        { "block_date": "ГГГГ-ММ-ДД ЧЧ:ММ:СС" | null }
+    """
+    block_date = getattr(data_service, "block_date", None)
+
+    if isinstance(block_date, datetime):
+        block_date_str = block_date.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        block_date_str = None
+
+    logger.info(f"Текущая дата блокировки: {block_date_str}")
+
+    return jsonify({
+        "block_date": block_date_str
+    }), 200
+
+@app.route("/api/balances/<string:date_str>", methods=['GET'])
+@app.route("/api/balances/<string:date_str>/<string:storage_code>", methods=['GET'])
+def get_balances_on_date(date_str, storage_code=None):
+    """
+    Получить остатки на указанную дату.
+
+    Параметры:
+        /api/balances/<date_str>
+        /api/balances/<date_str>/<storage_code>
+
+    Где:
+        date_str: "ГГГГ-ММ-ДД ЧЧ:ММ:СС"
+        storage_code: имя или unique_code склада
+
+    Примеры:
+        GET /api/balances/2025-10-25 00:00:00
+        GET /api/balances/2025-10-25 00:00:00/Основной склад
+    """
+    try:
+        target_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        abort(400, description="Неверный формат даты. Ожидается: ГГГГ-ММ-ДД ЧЧ:ММ:СС")
+
+    logger.info(f"Запрос остатков на дату {date_str} (storage={storage_code})")
+
+    # Данные из глобального репозитория
+    transactions_data = data.get(reposity.transaction_key(), {})
+    storages_data = data.get(reposity.storage_key(), {})
+    nomenclatures_data = data.get(reposity.nomenclature_key(), {})
+
+    if not transactions_data:
+        abort(500, description="В репозитории отсутствуют транзакции")
+
+    # Фильтрация складов по storage_code
+    allowed_storages = list(storages_data.values())
+    if storage_code:
+        allowed_storages = [
+            s for s in storages_data.values()
+            if s.name == storage_code or getattr(s, "unique_code", None) == storage_code
+        ]
+        if not allowed_storages:
+            abort(404, description="Склад не найден по параметру storage_code")
+    allowed_storage_ids = {s.unique_code for s in allowed_storages}
+
+    # Агрегируем остатки по ключу (storage_id, nomenclature_id)
+    balances_by_key: dict[tuple[str, str], balance_model] = {}
+
+    for tr in transactions_data.values():
+        # Берём только транзакции, которые произошли не позже целевой даты
+        if tr.date > target_date:
+            continue
+
+        storage = tr.storage
+        if storage.unique_code not in allowed_storage_ids:
+            continue
+
+        nomenclature = tr.nomenclature
+
+        # Базовая единица измерения для номенклатуры
+        base_measure = nomenclature.measure.base_measure or nomenclature.measure
+
+        quantity = tr.quantity
+
+        # Конвертация количества в базовую единицу измерения
+        if tr.measure.base_measure and tr.measure.base_measure == base_measure:
+            quantity *= tr.measure.conversion_factor
+
+        key = (storage.unique_code, nomenclature.unique_code)
+
+        if key not in balances_by_key:
+            balance_item = balance_model.create(
+                nomenclature=nomenclature,
+                measure=base_measure,
+                end_balance=0.0,
+                block_date=target_date
+            )
+            balance_item.storage = storage
+            balances_by_key[key] = balance_item
+
+        balances_by_key[key].end_balance = balances_by_key[key].end_balance + quantity
+
+    balance_list = list(balances_by_key.values())
+
+    try:
+        result = converter.convert_list(balance_list)
+    except Exception:
+        result = [
+            {
+                "storage_id": b.storage.unique_code,
+                "storage_name": b.storage.name,
+                "nomenclature_id": b.nomenclature.unique_code,
+                "nomenclature_name": b.nomenclature.name,
+                "measure_id": b.measure.unique_code,
+                "measure_name": b.measure.name,
+                "end_balance": b.end_balance,
+                "block_date": b.block_date.strftime("%Y-%m-%d %H:%M:%S")
+                    if isinstance(b.block_date, datetime) else None
+            }
+            for b in balance_list
+        ]
+
+    logger.info(f"Найдено {len(balance_list)} остатков на дату {date_str}")
+
+    return jsonify(result), 200
+
 @app.errorhandler(404)
 def page_not_found(error):
     """
@@ -502,6 +698,9 @@ if __name__ == '__main__':
     # Запускаем сервис данных и получаем данные репозитория
     data_service.start()
     data = data_service.repo.data
+    settings_mgr = settings_manager("settings.json")
+    settings_mgr.load_settings()
+    data_service.block_date = settings_mgr.settings.block_date
     
     logger.info("Сервис запущен на 0.0.0.0:8080")
     

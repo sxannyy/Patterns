@@ -78,6 +78,13 @@ class reposity:
             str: Ключ для словаря транзакций
         """
         return "transactions"
+    
+    @staticmethod
+    def balance_key():
+        """
+        Ключ для доступа к предрасчитанным остаткам (кешу).
+        """
+        return "balances"
 
     @staticmethod
     def keys() -> list:

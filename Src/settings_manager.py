@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from Src.Models.settings_model import settings_model
 from Src.Core.validator import argument_exception
 from Src.Core.validator import validator
@@ -23,9 +24,9 @@ class settings_manager:
 
     """
 
-    __config_namefile: str = ""  # Путь к файлу конфигурации.
+    __config_namefile: str = "settings.json"  # Путь к файлу конфигурации.
     __settings: settings_model = None  # Объект settings_model, хранящий конфигурацию.
-    __global_attributes: list = ["company", "response_format", "first_start"]  # Список глобальных атрибутов settings_model.
+    __global_attributes: list = ["company", "response_format", "first_start", "block_date"]  # Список глобальных атрибутов settings_model.
     __settings_dict: list = ["company"] # Список атрибутов settings_model, которые нужно конвертировать из словаря
 
     def __init__(self, config_filename: str):
@@ -75,6 +76,7 @@ class settings_manager:
         else:
             raise argument_exception(f'Не найден файл настроек {abs_path}')
 
+    @property
     def settings(self) -> settings_model:
         """
         Возвращает текущие настройки приложения (объект settings_model).
@@ -83,7 +85,7 @@ class settings_manager:
             settings_model: Объект settings_model, содержащий текущие настройки.
         """
         return self.__settings
-
+    
     def company_settings(self) -> company_model:
         """
         Удобный аксессор: возвращает settings.company.
@@ -139,32 +141,55 @@ class settings_manager:
 
         Возвращает:
             bool: True - если загрузка успешна и структура корректна, иначе False.
-
-        Обрабатывает исключения при открытии и чтении файла. Проверяет, что в файле
-        присутствуют все необходимые глобальные атрибуты.  Использует convert_to_settings
-        для маппинга настроек компании в объект company_model.
         """
 
         if self.config_namefile.strip() == "":
             raise Exception("Не найден файл настроек!")
+
         try:
-            with open(self.config_namefile,'r') as file:
+            with open(self.config_namefile, 'r', encoding='utf-8') as file:
                 data = json.load(file)
-                for key in self.__global_attributes:
-                    if key not in data.keys():
+
+            # --- Проверяем ОБЯЗАТЕЛЬНЫЕ ключи ---
+            required_keys = ["company", "response_format", "first_start"]
+            for key in required_keys:
+                if key not in data.keys():
+                    return False
+
+            # --- Создаём settings_model ---
+            self.__settings = settings_model()
+
+            # --- Заполняем атрибуты ---
+            for key in self.__global_attributes:
+                if key in self.__settings_dict:
+                    if not self.convert_to_settings(data, key):
                         return False
+                    continue
+                if key == "block_date":
+                    raw = data.get("block_date", None)
 
-                self.__settings = settings_model()
-
-                for key in self.__global_attributes:
-                    if key in self.__settings_dict:
-                        if not self.convert_to_settings(data, key):
-                            return False # Ошибка конвертации настроек компании
+                    if raw in (None, ""):
+                        # нет даты блокировки
+                        self.__settings.block_date = None
                     else:
+                        try:
+                            if len(raw) == 10:
+                                bd = datetime.strptime(raw, "%Y-%m-%d")
+                            else:
+                                bd = datetime.strptime(raw, "%Y-%m-%d %H:%M:%S")
+                        except ValueError:
+                            return False
+
+                        self.__settings.block_date = bd
+
+                else:
+                    # Все остальные глобальные атрибуты кладём как есть
+                    if key in data:
                         setattr(self.__settings, key, data[key])
+
             return True
-        except Exception as e:
-            print(f"Ошибка при загрузке настроек: {e}") # Logging ошибки
+
+        except Exception:
             return False
 
     def save_settings(self):
@@ -186,14 +211,25 @@ class settings_manager:
             
             # Сохраняем остальные глобальные атрибуты
             for attr in self.__global_attributes:
-                if attr != "company" and hasattr(self.__settings, attr):
-                    settings_dict[attr] = getattr(self.__settings, attr)
-            
+                if attr == "company":
+                    continue
+
+                if attr == "block_date":
+                    bd = getattr(self.__settings, "block_date", None)
+                    if isinstance(bd, date):
+                        # datetime тоже сюда попадает, форматируем как YYYY-MM-DD
+                        settings_dict["block_date"] = bd.strftime("%Y-%m-%d")
+                    else:
+                        settings_dict["block_date"] = bd  # None или уже строка
+                else:
+                    if hasattr(self.__settings, attr):
+                        settings_dict[attr] = getattr(self.__settings, attr)
+
             with open(self.config_namefile, 'w', encoding='utf-8') as file:
                 json.dump(settings_dict, file, ensure_ascii=False, indent=2)
                 
         except Exception as e:
-            print(f"Ошибка при сохранении настроек: {e}")
+            raise argument_exception(f"Ошибка при сохранении настроек: {e}")
 
     def default(self):
         """
@@ -210,3 +246,4 @@ class settings_manager:
         self.__settings.company.bik = 0
         self.__settings.response_format = "json"
         self.__settings.first_start = True
+        self.__settings.block_date = "2024-01-01"

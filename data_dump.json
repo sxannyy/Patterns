@@ -1,0 +1,398 @@
+{
+  "data": {
+    "measures": {
+      "г": {
+        "base_id": null,
+        "id": "255833deb493460dbfd34ccf4ad6d0fb",
+        "name": "грамм",
+        "value": 1.0
+      },
+      "кг": {
+        "base_id": "255833deb493460dbfd34ccf4ad6d0fb",
+        "id": "8148d60227244ffd983bc3b54432178f",
+        "name": "килограмм",
+        "value": 1000.0
+      },
+      "л": {
+        "base_id": null,
+        "id": "f02c43e4c1164eeeae8bc499971683c3",
+        "name": "литр",
+        "value": 1.0
+      },
+      "мл": {
+        "base_id": "f02c43e4c1164eeeae8bc499971683c3",
+        "id": "c97725f582904683a0904ecfdeb1b4a0",
+        "name": "миллилитер",
+        "value": 0.001
+      },
+      "шт": {
+        "base_id": null,
+        "id": "6934421d138f4279bd10ae8dc8101653",
+        "name": "шт",
+        "value": 1.0
+      }
+    },
+    "nomenclature_groups": {
+      "СиП": {
+        "id": "4c2ab21364d540848048ebafd165a322",
+        "name": "специи и пряности"
+      },
+      "ЖПП": {
+        "id": "0ec66e651814468fadc4b4f72b801f79",
+        "name": "продукты животного происхождения"
+      },
+      "МиК": {
+        "id": "f29cdaaedc2243daa3302ab6954be225",
+        "name": "мука и крупы"
+      }
+    },
+    "nomenclature": {
+      "Сахар": {
+        "category_id": "4c2ab21364d540848048ebafd165a322",
+        "id": "7dbca1fd130b405dbc2fba38bf36d1c8",
+        "name": "Сахар",
+        "range_id": "255833deb493460dbfd34ccf4ad6d0fb"
+      },
+      "Пшеничная мука": {
+        "category_id": "f29cdaaedc2243daa3302ab6954be225",
+        "id": "0db24521adec4e9cad18b217311cbd0b",
+        "name": "Пшеничная мука",
+        "range_id": "255833deb493460dbfd34ccf4ad6d0fb"
+      },
+      "Сливочное масло": {
+        "category_id": "0ec66e651814468fadc4b4f72b801f79",
+        "id": "8c245cee03694c35a13f757ff3c81671",
+        "name": "Сливочное масло",
+        "range_id": "255833deb493460dbfd34ccf4ad6d0fb"
+      },
+      "Яйца куриные": {
+        "category_id": "0ec66e651814468fadc4b4f72b801f79",
+        "id": "4a3fccfc8d974707b9114e184755b3d8",
+        "name": "Яйца куриные",
+        "range_id": "6934421d138f4279bd10ae8dc8101653"
+      },
+      "Ванилин": {
+        "category_id": "4c2ab21364d540848048ebafd165a322",
+        "id": "ec96097c5cea4c3f829fa1145d8ae59e",
+        "name": "Ванилин",
+        "range_id": "255833deb493460dbfd34ccf4ad6d0fb"
+      },
+      "Соль": {
+        "category_id": "4c2ab21364d540848048ebafd165a322",
+        "id": "9b6150eff2ea472d9486fd216dd6aced",
+        "name": "Соль",
+        "range_id": "255833deb493460dbfd34ccf4ad6d0fb"
+      },
+      "Перец черный": {
+        "category_id": "4c2ab21364d540848048ebafd165a322",
+        "id": "b9fdaceea2164f59a55529c5e4126701",
+        "name": "Перец черный",
+        "range_id": "255833deb493460dbfd34ccf4ad6d0fb"
+      },
+      "Молоко": {
+        "category_id": "0ec66e651814468fadc4b4f72b801f79",
+        "id": "8ef8ed2364794e5f95a5d18ab0c7e2e2",
+        "name": "Молоко",
+        "range_id": "c97725f582904683a0904ecfdeb1b4a0"
+      }
+    },
+    "recipes": {
+      "Вафли": {
+        "id": "b0e1ea2005e148cb9d8ab9539c16fc6d",
+        "ingredients": [
+          {
+            "nomenclature_id": "0db24521adec4e9cad18b217311cbd0b",
+            "nomenclature_name": "Пшеничная мука",
+            "quantity": 100,
+            "measure_unit": "грамм"
+          },
+          {
+            "nomenclature_id": "7dbca1fd130b405dbc2fba38bf36d1c8",
+            "nomenclature_name": "Сахар",
+            "quantity": 80,
+            "measure_unit": "грамм"
+          },
+          {
+            "nomenclature_id": "8c245cee03694c35a13f757ff3c81671",
+            "nomenclature_name": "Сливочное масло",
+            "quantity": 70,
+            "measure_unit": "грамм"
+          },
+          {
+            "nomenclature_id": "4a3fccfc8d974707b9114e184755b3d8",
+            "nomenclature_name": "Яйца куриные",
+            "quantity": 1,
+            "measure_unit": "шт"
+          },
+          {
+            "nomenclature_id": "ec96097c5cea4c3f829fa1145d8ae59e",
+            "nomenclature_name": "Ванилин",
+            "quantity": 5,
+            "measure_unit": "грамм"
+          }
+        ],
+        "name": "Вафли",
+        "steps": [
+          "Как испечь вафли хрустящие в вафельнице? Подготовьте необходимые продукты. Из данного количества у меня получилось 8 штук диаметром около 10 см.",
+          "Масло положите в сотейник с толстым дном. Растопите его на маленьком огне на плите, на водяной бане либо в микроволновке.",
+          "Добавьте в теплое масло сахар. Перемешайте венчиком до полного растворения сахара. От тепла сахар довольно быстро растает.",
+          "Добавьте в масло яйцо. Предварительно все-таки проверьте масло, не горячее ли оно, иначе яйцо может свариться. Перемешайте яйцо с маслом до однородности.",
+          "Всыпьте муку, добавьте ванилин.",
+          "Перемешайте массу венчиком до состояния гладкого однородного теста.",
+          "Разогрейте вафельницу по инструкции к ней. У меня очень старая, еще советских времен электровафельница. Она может и не очень красивая, но печет замечательно! Я не смазываю вафельницу маслом, в тесте достаточно жира, да и к ней уже давно ничего не прилипает. Но вы смотрите по своей модели. Выкладывайте тесто по столовой ложке. Можно класть немного меньше теста, тогда вафли будут меньше и их получится больше.",
+          "Пеките вафли несколько минут до золотистого цвета. Осторожно откройте вафельницу, она очень горячая! Снимите вафлю лопаткой. Горячая она очень мягкая, как блинчик."
+        ]
+      },
+      "Омлет с молоком": {
+        "id": "51d039dba4d4426eb269c69a54feb3a9",
+        "ingredients": [
+          {
+            "nomenclature_id": "4a3fccfc8d974707b9114e184755b3d8",
+            "nomenclature_name": "Яйца куриные",
+            "quantity": 3,
+            "measure_unit": "шт"
+          },
+          {
+            "nomenclature_id": "8ef8ed2364794e5f95a5d18ab0c7e2e2",
+            "nomenclature_name": "Молоко",
+            "quantity": 150,
+            "measure_unit": "миллилитер"
+          },
+          {
+            "nomenclature_id": "9b6150eff2ea472d9486fd216dd6aced",
+            "nomenclature_name": "Соль",
+            "quantity": 3,
+            "measure_unit": "грамм"
+          },
+          {
+            "nomenclature_id": "8c245cee03694c35a13f757ff3c81671",
+            "nomenclature_name": "Сливочное масло",
+            "quantity": 20,
+            "measure_unit": "грамм"
+          },
+          {
+            "nomenclature_id": "b9fdaceea2164f59a55529c5e4126701",
+            "nomenclature_name": "Перец черный",
+            "quantity": 2,
+            "measure_unit": "грамм"
+          }
+        ],
+        "name": "Омлет с молоком",
+        "steps": [
+          "Подготовка яиц: Яйца куриные достаньте заранее, чтобы они достигли комнатной температуры",
+          "Взбивание основы: В миске взбейте яйца с солью и черным перцем до легкой пены и однородной консистенции",
+          "Добавление молока: Постепенно влейте молоко, аккуратно перемешивая. Избегайте интенсивного взбивания",
+          "Подготовка сковороды: В сковороде растопите сливочное масло, равномерно распределите по всей поверхности",
+          "Выпекание: Вылейте яично-молочную смесь в разогретую сковороду. Накройте крышкой",
+          "Приготовление: Готовьте на среднем огне 7-10 минут. Омлет готов, когда края золотятся, а середина пропечена",
+          "Подача: Немного дайте омлету остыть в сковороде, затем аккуратно сверните или разрежьте на порции. Подавайте сразу после приготовления"
+        ]
+      },
+      "Простые лепешки": {
+        "id": "5b5eeef37d234dab8f496ddf654800ac",
+        "ingredients": [
+          {
+            "nomenclature_id": "0db24521adec4e9cad18b217311cbd0b",
+            "nomenclature_name": "Пшеничная мука",
+            "quantity": 400,
+            "measure_unit": "грамм"
+          },
+          {
+            "nomenclature_id": "4a3fccfc8d974707b9114e184755b3d8",
+            "nomenclature_name": "Яйца куриные",
+            "quantity": 2,
+            "measure_unit": "шт"
+          },
+          {
+            "nomenclature_id": "8ef8ed2364794e5f95a5d18ab0c7e2e2",
+            "nomenclature_name": "Молоко",
+            "quantity": 200,
+            "measure_unit": "миллилитер"
+          },
+          {
+            "nomenclature_id": "9b6150eff2ea472d9486fd216dd6aced",
+            "nomenclature_name": "Соль",
+            "quantity": 5,
+            "measure_unit": "грамм"
+          },
+          {
+            "nomenclature_id": "8c245cee03694c35a13f757ff3c81671",
+            "nomenclature_name": "Сливочное масло",
+            "quantity": 30,
+            "measure_unit": "грамм"
+          }
+        ],
+        "name": "Простые лепешки",
+        "steps": [
+          "Подготовка ингредиентов: В миске взбейте яйца куриные с солью до однородности",
+          "Смешивание жидкой основы: Добавьте молоко и растопленное сливочное масло, тщательно перемешайте",
+          "Замес теста: Постепенно всыпайте пшеничную муку через сито, постоянно помешивая. Сначала используйте венчик, затем вымешивайте руками",
+          "Отдых теста: Замесите крутое эластичное тесто, накройте полотенцем и оставьте отдыхать 15 минут при комнатной температуре",
+          "Формирование лепешек: Разделите тесто на 6 равных частей. Каждую часть раскатайте в тонкую круглую лепешку толщиной 3-4 мм",
+          "Выпекание: Разогрейте сухую сковороду на среднем огне. Обжаривайте лепешки по 2-3 минуты с каждой стороны до появления золотистых пятен",
+          "Подача: Готовые лепешки смажьте сливочным маслом. Готово!"
+        ]
+      }
+    },
+    "storages": {
+      "Основной склад": {
+        "address": "ул. Центральная, 1",
+        "id": "c7f2aae8ec904bb296f1b7eebad249d4",
+        "name": "Основной склад"
+      },
+      "Резервный склад": {
+        "address": "ул. Крестьянская, 47",
+        "id": "1ec9e05859594c7c8d3f16addd9d2ae9",
+        "name": "Резервный склад"
+      }
+    },
+    "transactions": {
+      "f4419ef7c6904763ac83415153d29cf5": {
+        "date": {
+          "type": "datetime",
+          "year": 2025,
+          "month": 10,
+          "day": 25,
+          "hour": 10,
+          "minute": 10,
+          "second": 0,
+          "iso_format": "2025-10-25T10:10:00"
+        },
+        "id": "f4419ef7c6904763ac83415153d29cf5",
+        "measure_id": "255833deb493460dbfd34ccf4ad6d0fb",
+        "name": "",
+        "nomenclature_id": "7dbca1fd130b405dbc2fba38bf36d1c8",
+        "quantity": 1000.0,
+        "storage_id": "c7f2aae8ec904bb296f1b7eebad249d4"
+      },
+      "955560737be442b99ea3d9f3aa6c359f": {
+        "date": {
+          "type": "datetime",
+          "year": 2025,
+          "month": 10,
+          "day": 27,
+          "hour": 10,
+          "minute": 10,
+          "second": 0,
+          "iso_format": "2025-10-27T10:10:00"
+        },
+        "id": "955560737be442b99ea3d9f3aa6c359f",
+        "measure_id": "255833deb493460dbfd34ccf4ad6d0fb",
+        "name": "",
+        "nomenclature_id": "7dbca1fd130b405dbc2fba38bf36d1c8",
+        "quantity": -200.0,
+        "storage_id": "c7f2aae8ec904bb296f1b7eebad249d4"
+      },
+      "17490c8dfb3e4f108c2268388f550477": {
+        "date": {
+          "type": "datetime",
+          "year": 2025,
+          "month": 10,
+          "day": 26,
+          "hour": 10,
+          "minute": 10,
+          "second": 0,
+          "iso_format": "2025-10-26T10:10:00"
+        },
+        "id": "17490c8dfb3e4f108c2268388f550477",
+        "measure_id": "255833deb493460dbfd34ccf4ad6d0fb",
+        "name": "",
+        "nomenclature_id": "0db24521adec4e9cad18b217311cbd0b",
+        "quantity": 5000.0,
+        "storage_id": "1ec9e05859594c7c8d3f16addd9d2ae9"
+      },
+      "b4c9d21e40ae45359d7319a359ba301d": {
+        "date": {
+          "type": "datetime",
+          "year": 2025,
+          "month": 10,
+          "day": 24,
+          "hour": 10,
+          "minute": 10,
+          "second": 0,
+          "iso_format": "2025-10-24T10:10:00"
+        },
+        "id": "b4c9d21e40ae45359d7319a359ba301d",
+        "measure_id": "6934421d138f4279bd10ae8dc8101653",
+        "name": "",
+        "nomenclature_id": "4a3fccfc8d974707b9114e184755b3d8",
+        "quantity": 30.0,
+        "storage_id": "c7f2aae8ec904bb296f1b7eebad249d4"
+      },
+      "4b42fbd2fffa4dcc97a33ea08ad246b3": {
+        "date": {
+          "type": "datetime",
+          "year": 2025,
+          "month": 10,
+          "day": 28,
+          "hour": 10,
+          "minute": 10,
+          "second": 0,
+          "iso_format": "2025-10-28T10:10:00"
+        },
+        "id": "4b42fbd2fffa4dcc97a33ea08ad246b3",
+        "measure_id": "6934421d138f4279bd10ae8dc8101653",
+        "name": "",
+        "nomenclature_id": "4a3fccfc8d974707b9114e184755b3d8",
+        "quantity": -5.0,
+        "storage_id": "c7f2aae8ec904bb296f1b7eebad249d4"
+      }
+    },
+    "balances": {
+      "c7f2aae8ec904bb296f1b7eebad249d4:7dbca1fd130b405dbc2fba38bf36d1c8": {
+        "block_date": {
+          "type": "datetime",
+          "year": 2025,
+          "month": 12,
+          "day": 30,
+          "hour": 0,
+          "minute": 0,
+          "second": 0,
+          "iso_format": "2025-12-30T00:00:00"
+        },
+        "end_balance": 800.0,
+        "id": "607156aaee414d00bf4b42a55d616a2a",
+        "measure_id": "255833deb493460dbfd34ccf4ad6d0fb",
+        "name": "",
+        "nomenclature_id": "7dbca1fd130b405dbc2fba38bf36d1c8",
+        "storage_id": "c7f2aae8ec904bb296f1b7eebad249d4"
+      },
+      "1ec9e05859594c7c8d3f16addd9d2ae9:0db24521adec4e9cad18b217311cbd0b": {
+        "block_date": {
+          "type": "datetime",
+          "year": 2025,
+          "month": 12,
+          "day": 30,
+          "hour": 0,
+          "minute": 0,
+          "second": 0,
+          "iso_format": "2025-12-30T00:00:00"
+        },
+        "end_balance": 5000.0,
+        "id": "a2fa1c0e7d30498c9ce54ff6600c04b0",
+        "measure_id": "255833deb493460dbfd34ccf4ad6d0fb",
+        "name": "",
+        "nomenclature_id": "0db24521adec4e9cad18b217311cbd0b",
+        "storage_id": "1ec9e05859594c7c8d3f16addd9d2ae9"
+      },
+      "c7f2aae8ec904bb296f1b7eebad249d4:4a3fccfc8d974707b9114e184755b3d8": {
+        "block_date": {
+          "type": "datetime",
+          "year": 2025,
+          "month": 12,
+          "day": 30,
+          "hour": 0,
+          "minute": 0,
+          "second": 0,
+          "iso_format": "2025-12-30T00:00:00"
+        },
+        "end_balance": 25.0,
+        "id": "e860d4ff34a3490e8e5ed9a56a94b72b",
+        "measure_id": "6934421d138f4279bd10ae8dc8101653",
+        "name": "",
+        "nomenclature_id": "4a3fccfc8d974707b9114e184755b3d8",
+        "storage_id": "c7f2aae8ec904bb296f1b7eebad249d4"
+      }
+    }
+  }
+}
