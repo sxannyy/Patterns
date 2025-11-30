@@ -14,7 +14,7 @@ BASE = r"/home/sxannyy/Desktop/Patterns"
 class TestSettingsManager(unittest.TestCase):
     def test_load_different_settings(self):
         # Подготовка
-        filename1 = os.path.join(BASE, "settings.json")
+        filename1 = os.path.join(BASE, "settings_1.json")
         filename2 = os.path.join("company_folder", "settings_2.json")
 
         # Действие

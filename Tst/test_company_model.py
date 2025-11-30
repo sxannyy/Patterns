@@ -35,7 +35,7 @@ class TestCompanyModel(unittest.TestCase):
 
     def test_load_createmodel_companymodel(self):
         # Подготовка
-        filename = os.path.join('settings.json')
+        filename = os.path.join('settings_1.json')
         sm = settings_manager(filename)
 
         # Действие
