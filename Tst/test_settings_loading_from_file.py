@@ -16,8 +16,8 @@ class TestSettingsLoadingFromFile(unittest.TestCase):
 
     def test_relative_path(self):
         # Подготовка
-        filename1 = os.path.join("..\settings.json")
-        filename2 = os.path.join("settings.json")
+        filename1 = os.path.join("..\settings_1.json")
+        filename2 = os.path.join("settings_1.json")
 
         sm1 = settings_manager(filename1)
         sm2 = settings_manager(filename2)
@@ -35,7 +35,7 @@ class TestSettingsLoadingFromFile(unittest.TestCase):
 
     def test_absolute_path(self):
         # Подготовка
-        filename = os.path.join(BASE, "settings.json")
+        filename = os.path.join(BASE, "settings_1.json")
     
         sm1 = settings_manager(filename)
 
