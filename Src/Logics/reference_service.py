@@ -1,9 +1,9 @@
 from typing import Any, Dict
 from Src.reposity import reposity
-from Src.Core.prototype import prototype
 from Src.Core.validator import argument_exception, validator
 from Src.Core.observe_service import observe_service
 from Src.Core.event_type import event_type
+from Src.Dto.reference_event_dto import reference_event_dto
 from Src.Logics.reference_observer import reference_observer
 from Src.start_service import start_service
 from Src.settings_manager import settings_manager
@@ -20,22 +20,18 @@ class reference_service:
     def __init__(self, repo: reposity, start_srv: start_service, settings_mgr: settings_manager):
         """
         Инициализация сервиса справочников
-        
-        Аргументы:
-            repo (reposity): Репозиторий данных
-            start_srv (start_service): Сервис инициализации приложения
-            settings_mgr (settings_manager): Менеджер настроек
         """
         validator.validate(repo, reposity)
         validator.validate(start_srv, start_service)
         validator.validate(settings_mgr, settings_manager)
-        
+
         self.__repo = repo
         self.__start_srv = start_srv
         self.__settings_mgr = settings_mgr
-        
+
         # Регистрируем наблюдателя для пост-обработки операций
         self.__observer = reference_observer(self.__repo, self.__start_srv, self.__settings_mgr)
+        observe_service.add(self.__observer)
 
     def __get_key(self, reference_type: str) -> str:
         """
@@ -79,12 +75,12 @@ class reference_service:
         key = self.__get_key(reference_type)
         collection = self.__repo.data.get(key, {})
 
-        # Сначала пытаемся найти по ключу напрямую (быстрый поиск)
+        # Сначала пытаемся найти по ключу напрямую
         item = collection.get(unique_code)
         if item is not None:
             return item
 
-        # Если не нашли, ищем в values() по unique_code (для данных, созданных start_service)
+        # Если не нашли, ищем в values() по unique_code
         for value in collection.values():
             if hasattr(value, 'unique_code') and value.unique_code == unique_code:
                 return value
@@ -96,16 +92,6 @@ class reference_service:
     def add(self, reference_type: str, item: Dict) -> Any:
         """
         Добавляет новый элемент в справочник
-        
-        Аргументы:
-            reference_type (str): Тип справочника
-            item (Any): Добавляемый элемент
-            
-        Возвращает:
-            Any: Добавленный элемент
-            
-        Исключения:
-            argument_exception: Если элемент с таким кодом уже существует
         """
         key = self.__get_key(reference_type)
         collection = self.__repo.data.setdefault(key, {})
@@ -114,7 +100,7 @@ class reference_service:
         if not unique_code:
             raise argument_exception("Элемент должен иметь уникальный код")
 
-        # Проверяем существование элемента с таким кодом (поддержка обеих структур)
+        # Проверяем существование элемента с таким кодом
         existing_item = self.get_one(reference_type, unique_code)
         if existing_item is not None:
             raise argument_exception("Элемент с таким уникальным кодом уже существует")
@@ -122,33 +108,24 @@ class reference_service:
         collection[unique_code] = item
 
         # Уведомляем наблюдателей о добавлении
-        observe_service.create_event(event_type.add_new_reference(), {
-            "action": "add", 
-            "type": reference_type, 
-            "item": item
-        })
+        event_dto = reference_event_dto()
+        event_dto.action = "add"
+        event_dto.reference_type = reference_type
+        event_dto.item = item
+
+        observe_service.create_event(event_type.add_new_reference(), event_dto)
 
         return item
+
 
     def update(self, reference_type: str, unique_code: str, changes: dict) -> Any:
         """
         Обновляет элемент справочника
-
-        Аргументы:
-            reference_type (str): Тип справочника
-            unique_code (str): Уникальный код элемента
-            changes (dict): Словарь с изменениями
-
-        Возвращает:
-            Any: Обновленный элемент
-
-        Исключения:
-            argument_exception: Если элемент не найден
         """
         key = self.__get_key(reference_type)
         collection = self.__repo.data.get(key, {})
 
-        # Ищем элемент (поддержка обеих структур хранения)
+        # Ищем элемент
         item = self.get_one(reference_type, unique_code)
         if item is None:
             raise argument_exception("Элемент не найден")
@@ -163,13 +140,14 @@ class reference_service:
                 item[field] = new_value
 
         # Уведомляем наблюдателей об изменении
-        observe_service.create_event(event_type.change_reference(), {
-            "action": "update", 
-            "type": reference_type, 
-            "item": item,
-            "old_item": old_item,
-            "changes": changes
-        })
+        event_dto = reference_event_dto()
+        event_dto.action = "update"
+        event_dto.reference_type = reference_type
+        event_dto.item = item
+        event_dto.old_item = old_item
+        event_dto.changes = changes
+
+        observe_service.create_event(event_type.change_reference(), event_dto)
 
         # Сохраняем настройки и пересчитываем остатки
         self.__settings_mgr.save_settings()
@@ -181,21 +159,11 @@ class reference_service:
     def delete(self, reference_type: str, unique_code: str) -> bool:
         """
         Удаляет элемент из справочника
-
-        Аргументы:
-            reference_type (str): Тип справочника
-            unique_code (str): Уникальный код элемента
-
-        Возвращает:
-            bool: True если удаление успешно
-
-        Исключения:
-            argument_exception: Если элемент не найден или используется в других объектах
         """
         key = self.__get_key(reference_type)
         collection = self.__repo.data.get(key, {})
 
-        # Ищем элемент (поддержка обеих структур хранения)
+        # Ищем элемент
         item = self.get_one(reference_type, unique_code)
         if item is None:
             raise argument_exception("Элемент не найден")
@@ -215,22 +183,25 @@ class reference_service:
             raise argument_exception("Элемент не найден в коллекции")
 
         # Проверяем использование элемента перед удалением
-        observe_service.create_event(event_type.deleting_reference(), {
-            "type": reference_type,
-            "unique_code": unique_code,
-            "item": item
-        })
+        before_delete_dto = reference_event_dto()
+        before_delete_dto.action = "delete"
+        before_delete_dto.reference_type = reference_type
+        before_delete_dto.unique_code = unique_code
+        before_delete_dto.item = item
 
-        # Если никто не заблокировал удаление, удаляем элемент
-        del collection[storage_key]
+        observe_service.create_event(event_type.deleting_reference(), before_delete_dto)
+
+        # Если никто не выбросил исключение, удаляем элемент
+        collection.pop(storage_key, None)
 
         # Уведомляем наблюдателей об удалении
-        observe_service.create_event(event_type.deleted_reference(), {
-            "action": "delete", 
-            "type": reference_type, 
-            "unique_code": unique_code,
-            "item": item
-        })
+        after_delete_dto = reference_event_dto()
+        after_delete_dto.action = "delete"
+        after_delete_dto.reference_type = reference_type
+        after_delete_dto.unique_code = unique_code
+        after_delete_dto.item = item
+
+        observe_service.create_event(event_type.deleted_reference(), after_delete_dto)
 
         # Сохраняем настройки и пересчитываем остатки
         self.__settings_mgr.save_settings()
