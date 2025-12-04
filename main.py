@@ -14,6 +14,8 @@ from Src.reposity import reposity
 from Src.settings_manager import settings_manager
 from Src.start_service import start_service
 from Src.Convertors.convert_factory import convert_factory
+from Src.Logics.reference_service import reference_service
+from Src.Core.validator import argument_exception
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +30,7 @@ data_service = start_service()
 data = None
 responses_factory = factory_entities()
 converter = convert_factory()
+ref_service = None  # Будет инициализирован после загрузки данных
 
 @app.route("/", methods=['GET'])
 def index():
@@ -42,7 +45,7 @@ def index():
         "message": "Добро пожаловать в кулинарное REST API",
         "endpoints": {
             "api_accessibility": "GET /api/accessibility",
-            "recipes_list": "GET /api/recipes", 
+            "recipes_list": "GET /api/recipes",
             "recipe_by_id": "GET /api/recipes/<recipe_id>",
             "references_list": "GET /api/references",
             "reference_by_name": "GET /api/references/<reference_name>",
@@ -52,7 +55,13 @@ def index():
             "OSV": "POST /api/report/osv",
             "set_block_date": "POST /api/settings/block-date",
             "get_block_date": "GET /api/settings/block-date",
-            "balances_on_date": "GET /api/balances?date=YYYY-MM-DD%%20HH:MM:SS[&storage=...]"
+            "balances_on_date": "GET /api/balances?date=YYYY-MM-DD%%20HH:MM:SS[&storage=...]",
+            "reference_operations": {
+                "get_reference_item": "GET /api/<reference_type>?unique_code=...",
+                "add_reference_item": "PUT /api/<reference_type>",
+                "update_reference_item": "PATCH /api/<reference_type>",
+                "delete_reference_item": "DELETE /api/<reference_type>?unique_code=..."
+            }
         }
     })
 
@@ -656,6 +665,201 @@ def get_balances_on_date(date_str, storage_code=None):
 
     return jsonify(result), 200
 
+@app.route("/api/<string:reference_type>", methods=['GET'])
+def get_reference_item(reference_type):
+    """
+    Получить один элемент справочника по уникальному коду.
+
+    Аргументы:
+        reference_type (str): Тип справочника (nomenclature, measure, nomenclature_group, storage)
+
+    Query параметры:
+        unique_code (str): Уникальный код элемента
+
+    Возвращает:
+        JSON объект с данными элемента справочника
+
+    Ошибки:
+        400: Если не указан unique_code
+        404: Если элемент не найден
+        500: В случае внутренней ошибки сервера
+    """
+    try:
+        unique_code = flask.request.args.get('unique_code')
+
+        if not unique_code:
+            abort(400, description="Параметр unique_code обязателен")
+
+        logger.info(f"Запрос элемента справочника {reference_type} с кодом {unique_code}")
+
+        item = ref_service.get_one(reference_type, unique_code)
+
+        if not item:
+            abort(404, description=f"Элемент с кодом '{unique_code}' не найден в справочнике '{reference_type}'")
+
+        # Преобразуем элемент в JSON
+        converted_item = converter.convert(item)
+
+        logger.info(f"Элемент справочника {reference_type} с кодом {unique_code} успешно найден")
+        return jsonify(converted_item), 200
+
+    except argument_exception as e:
+        logger.error(f"Ошибка при получении элемента справочника: {str(e)}")
+        abort(400, description=str(e))
+    except Exception as e:
+        logger.error(f"Ошибка при получении элемента справочника: {str(e)}")
+        abort(500, description=f"Ошибка при получении элемента справочника: {str(e)}")
+
+@app.route("/api/<string:reference_type>", methods=['PUT'])
+def add_reference_item(reference_type):
+    """
+    Добавить новый элемент в справочник.
+
+    Аргументы:
+        reference_type (str): Тип справочника (nomenclature, measure, nomenclature_group, storage)
+
+    Тело запроса (JSON):
+        Объект с данными нового элемента справочника
+
+    Возвращает:
+        JSON объект с данными добавленного элемента
+
+    Ошибки:
+        400: Если запрос не содержит JSON или данные некорректны
+        500: В случае внутренней ошибки сервера
+    """
+    try:
+        if not flask.request.is_json:
+            abort(400, description="Ожидается JSON в теле запроса")
+
+        request_data = flask.request.get_json()
+        logger.info(f"Запрос на добавление элемента в справочник {reference_type}")
+
+        # Конвертируем JSON обратно в объект модели
+        item = converter.convert({reference_type: [request_data]})[reference_type][0]
+
+        # Добавляем элемент через сервис
+        added_item = ref_service.add(reference_type, item)
+
+        # Преобразуем элемент в JSON
+        converted_item = converter.convert(added_item)
+
+        logger.info(f"Элемент успешно добавлен в справочник {reference_type}")
+        return jsonify(converted_item), 201
+
+    except argument_exception as e:
+        logger.error(f"Ошибка при добавлении элемента: {str(e)}")
+        abort(400, description=str(e))
+    except Exception as e:
+        logger.error(f"Ошибка при добавлении элемента: {str(e)}")
+        abort(500, description=f"Ошибка при добавлении элемента: {str(e)}")
+
+@app.route("/api/<string:reference_type>", methods=['PATCH'])
+def update_reference_item(reference_type):
+    """
+    Обновить элемент справочника.
+
+    Аргументы:
+        reference_type (str): Тип справочника (nomenclature, measure, nomenclature_group, storage)
+
+    Тело запроса (JSON):
+        {
+            "unique_code": "код элемента",
+            "changes": {
+                "field1": "new_value1",
+                "field2": "new_value2"
+            }
+        }
+
+    Возвращает:
+        JSON объект с данными обновленного элемента
+
+    Ошибки:
+        400: Если запрос не содержит JSON или данные некорректны
+        404: Если элемент не найден
+        500: В случае внутренней ошибки сервера
+    """
+    try:
+        if not flask.request.is_json:
+            abort(400, description="Ожидается JSON в теле запроса")
+
+        request_data = flask.request.get_json()
+        unique_code = request_data.get('unique_code')
+        changes = request_data.get('changes', {})
+
+        if not unique_code:
+            abort(400, description="Параметр unique_code обязателен")
+
+        if not changes:
+            abort(400, description="Параметр changes обязателен")
+
+        logger.info(f"Запрос на обновление элемента {unique_code} в справочнике {reference_type}")
+
+        # Обновляем элемент через сервис
+        updated_item = ref_service.update(reference_type, unique_code, changes)
+
+        # Преобразуем элемент в JSON
+        converted_item = converter.convert(updated_item)
+
+        logger.info(f"Элемент {unique_code} успешно обновлен в справочнике {reference_type}")
+        return jsonify(converted_item), 200
+
+    except argument_exception as e:
+        logger.error(f"Ошибка при обновлении элемента: {str(e)}")
+        abort(400, description=str(e))
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении элемента: {str(e)}")
+        abort(500, description=f"Ошибка при обновлении элемента: {str(e)}")
+
+@app.route("/api/<string:reference_type>", methods=['DELETE'])
+def delete_reference_item(reference_type):
+    """
+    Удалить элемент из справочника.
+
+    Аргументы:
+        reference_type (str): Тип справочника (nomenclature, measure, nomenclature_group, storage)
+
+    Query параметры:
+        unique_code (str): Уникальный код элемента
+
+    Возвращает:
+        JSON с результатом операции
+
+    Ошибки:
+        400: Если не указан unique_code или элемент используется в других объектах
+        404: Если элемент не найден
+        500: В случае внутренней ошибки сервера
+    """
+    try:
+        unique_code = flask.request.args.get('unique_code')
+
+        if not unique_code:
+            abort(400, description="Параметр unique_code обязателен")
+
+        logger.info(f"Запрос на удаление элемента {unique_code} из справочника {reference_type}")
+
+        # Удаляем элемент через сервис
+        result = ref_service.delete(reference_type, unique_code)
+
+        logger.info(f"Элемент {unique_code} успешно удален из справочника {reference_type}")
+        return jsonify({
+            "status": "success",
+            "message": f"Элемент с кодом '{unique_code}' успешно удален из справочника '{reference_type}'"
+        }), 200
+
+    except argument_exception as e:
+        logger.error(f"Ошибка при удалении элемента: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": f"Ошибка при удалении элемента: {str(e)}"
+        }), 400
+    except Exception as e:
+        logger.error(f"Ошибка при удалении элемента: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": f"Ошибка при удалении элемента: {str(e)}"
+        }), 500
+
 @app.errorhandler(404)
 def page_not_found(error):
     """
@@ -701,8 +905,11 @@ if __name__ == '__main__':
     settings_mgr = settings_manager("settings.json")
     settings_mgr.load_settings()
     data_service.block_date = settings_mgr.settings.block_date
-    
+
+    # Инициализируем сервис справочников
+    ref_service = reference_service(data_service.repo, data_service, settings_mgr)
+
     logger.info("Сервис запущен на 0.0.0.0:8080")
-    
+
     # Запускаем Flask приложение
     app.run(host="0.0.0.0", port=8080)
