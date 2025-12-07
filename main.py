@@ -2,7 +2,6 @@ from datetime import datetime
 import connexion
 import flask
 from flask import abort, jsonify
-import logging
 
 from Src.Core.prototype import prototype
 from Src.Dto.filter_sorting_dto import filter_sorting_dto
@@ -17,30 +16,118 @@ from Src.Convertors.convert_factory import convert_factory
 from Src.Logics.reference_service import reference_service
 from Src.Core.validator import argument_exception
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from Src.Core.observe_service import observe_service
+from Src.Core.event_type import event_type
+from Src.Dto.log_event_dto import log_event_dto
 
-# Инициализация Flask приложения
+try:
+    from Src.Core.logger import logger as observe_logger
+except Exception:
+    observe_logger = None
+
+def emit(event: str, message: str, data: dict = None, exc: Exception = None):
+    """ 
+    Внутренний помощник для отправки событий логирования.
+
+    Формирует log_event_dto и публикует событие через observe_service.
+
+    Аргументы:
+        event (str): Тип события логирования (event_type.*_log()).
+        message (str): Текст сообщения.
+        data (dict, optional): Дополнительные данные контекста.
+        exc (Exception, optional): Исключение для фиксации в логе.
+
+    Примечания:
+        Исключение сохраняется в DTO в виде строки, 
+        чтобы избежать проблем сериализации.
+    """
+    dto = log_event_dto()
+    dto.message = message
+    dto.data = data or {}
+    if exc is not None:
+        dto.exception = str(exc)
+    observe_service.create_event(event, dto)
+
+def log_debug(message: str, data: dict = None):
+    """ 
+    Логирование отладочного сообщения.
+
+    Аргументы:
+        message (str): Текст сообщения.
+        data (dict, optional): Дополнительные данные.
+    """
+    emit(event_type.debug_log(), message, data=data)
+
+def log_info(message: str, data: dict = None):
+    """ 
+    Логирование информационного сообщения.
+
+    Аргументы:
+        message (str): Текст сообщения.
+        data (dict, optional): Дополнительные данные.
+    """
+    emit(event_type.info_log(), message, data=data)
+
+def log_warning(message: str, data: dict = None):
+    """ 
+    Логирование предупреждения.
+
+    Аргументы:
+        message (str): Текст сообщения.
+        data (dict, optional): Дополнительные данные.
+    """
+    emit(event_type.warning_log(), message, data=data)
+
+def log_error(message: str, exc: Exception = None, data: dict = None):
+    """ 
+    Логирование ошибки.
+
+    Аргументы:
+        message (str): Текст сообщения.
+        exc (Exception, optional): Исключение.
+        data (dict, optional): Дополнительные данные.
+    """
+    emit(event_type.error_log(), message, data=data, exc=exc)
+
+""" 
+Инициализация Connexion/Flask приложения
+"""
 flask_app = connexion.FlaskApp(__name__)
 app = flask_app.app
 
-# Инициализация сервисов
+""" 
+Инициализация сервисов доменной логики и инфраструктуры.
+
+data_service:
+    Основной сервис данных (старт/загрузка/доступ к репозиториям).
+data:
+    Ссылка на словарь данных репозитория.
+responses_factory:
+    Фабрика форматов ответа (csv/json и т.п.).
+converter:
+    Фабрика конвертеров доменных моделей в DTO/словари.
+ref_service:
+    Сервис справочников (инициализируется после загрузки данных).
+settings_mgr:
+    Менеджер настроек (инициализируется при запуске приложения).
+"""
+
 data_service = start_service()
 data = None
 responses_factory = factory_entities()
 converter = convert_factory()
-ref_service = None  # Будет инициализирован после загрузки данных
+ref_service = None
+settings_mgr = None
+
+# Endpoints: базовые и информационные
 
 @app.route("/", methods=['GET'])
 def index():
-    """
+    """ 
     Корневой эндпоинт API.
-    
-    Возвращает:
-        JSON с приветственным сообщением и списком доступных эндпоинтов
+    Возвращает краткое описание сервиса и список основных маршрутов.
     """
-    logger.info("Обработка корневого запроса")
+    log_info("Обработка корневого запроса")
     return jsonify({
         "message": "Добро пожаловать в кулинарное REST API",
         "endpoints": {
@@ -67,311 +154,312 @@ def index():
 
 @app.route("/api/accessibility", methods=['GET'])
 def formats():
-    """
-    Проверить доступность REST API.
-    
+    """ 
+    Тестовый эндпоинт доступности API.
+
     Возвращает:
-        Строка "SUCCESS" при успешной проверке доступности
+        str: Статус доступности сервиса.
     """
-    logger.info("Проверка доступности API")
+    log_info("Проверка доступности API")
     return "SUCCESS"
+
+# Endpoints: форматы ответа и рецепты
 
 @app.route("/response/<string:type>", methods=['GET'])
 def get_response(type):
-    """
-    Получить ответ в указанном формате.
-    
+    """ 
+    Возвращает данные рецептов в указанном формате ответа.
     Аргументы:
-        type (str): Тип формата ответа (должен быть поддерживаемым форматом)
-        
+        type (str): Название формата ответа.
+    Исключения:
+        404: Если формат не поддерживается.
     Возвращает:
-        Текст ответа в запрошенном формате
-        
-    Ошибки:
-        404: Если указанный тип формата не поддерживается
+        str: Сформированный текст ответа в выбранном формате.
     """
-    logger.info(f"Запрос ответа в формате: {type}")
-    
-    # Проверяем поддержку запрошенного формата
+    log_info("Запрос ответа в формате", {"type": type})
+
     if type not in responses_factory.response_formats:
-        logger.warning(f"Неподдерживаемый формат: {type}")
+        log_warning("Неподдерживаемый формат ответа", {"type": type})
         abort(404, description=f"Формат '{type}' не поддерживается")
-    
-    # Создаем генератор ответа и генерируем текст
+
     response = responses_factory.create(type)
     recipe_data = data[reposity.recipe_key()]
     text = response().create(recipe_data)
-    
-    logger.info(f"Ответ успешно сгенерирован в формате: {type}")
+
+    log_info("Ответ успешно сгенерирован", {"type": type})
     return text
 
 @app.route("/api/recipes", methods=['GET'])
 def get_recipes():
-    """
-    Получить список всех рецептов в формате JSON.
-    
+    """ 
+    Возвращает список всех рецептов.
+
+    Логика:
+        - извлекает рецепты из репозитория
+        - конвертирует в DTO/словарный формат
+
     Возвращает:
-        JSON массив со всеми рецептами
-        
-    Ошибки:
-        500: В случае внутренней ошибки сервера при получении рецептов
+        flask.Response: JSON список рецептов.
+
+    Исключения:
+        500: При внутренней ошибке чтения/конвертации.
     """
-    logger.info("Запрос списка всех рецептов")
+    log_info("Запрос списка всех рецептов")
     try:
-        # Получаем данные рецептов из репозитория
         recipes_data = data.get(reposity.recipe_key(), {})
-        
-        # Преобразуем все рецепты в JSON-совместимый формат
+
         converted_recipes = []
         for recipe_name, recipe in recipes_data.items():
             converted_recipe = converter.convert(recipe)
             converted_recipes.append(converted_recipe)
-        
-        logger.info(f"Успешно возвращено {len(converted_recipes)} рецептов")
+
+        log_info("Успешно возвращено рецептов", {"count": len(converted_recipes)})
         return jsonify(converted_recipes)
-        
+
     except Exception as e:
-        logger.error(f"Ошибка при получении списка рецептов: {str(e)}")
+        log_error("Ошибка при получении списка рецептов", e)
         abort(500, description=f"Ошибка при получении списка рецептов: {str(e)}")
 
 @app.route("/api/recipes/<string:recipe_id>", methods=['GET'])
 def get_recipe(recipe_id):
-    """
-    Получить конкретный рецепт по ID в формате JSON.
-    
+    """ 
+    Возвращает рецепт по идентификатору.
+
+    Поиск выполняется:
+        - по unique_code объекта рецепта
+        - либо по ключу словаря рецептов
+
     Аргументы:
-        recipe_id (str): Идентификатор или название рецепта
-        
+        recipe_id (str): Идентификатор рецепта.
+
     Возвращает:
-        JSON объект с данными рецепта
-        
-    Ошибки:
-        404: Если рецепт с указанным ID не найден
-        500: В случае внутренней ошибки сервера
+        flask.Response: JSON объект рецепта.
+
+    Исключения:
+        404: Если рецепт не найден.
+        500: При внутренней ошибке.
     """
-    logger.info(f"Запрос рецепта с идентификатором: {recipe_id}")
+    log_info("Запрос рецепта", {"recipe_id": recipe_id})
     try:
         recipes_data = data.get(reposity.recipe_key(), {})
-        
-        # Ищем рецепт по уникальному коду или названию
+
         found_recipe = None
         for recipe_name, recipe in recipes_data.items():
-            # Поиск по уникальному коду
             if hasattr(recipe, 'unique_code') and getattr(recipe, 'unique_code', None) == recipe_id:
                 found_recipe = recipe
                 break
-            # Альтернативный поиск по названию
             elif recipe_name == recipe_id:
                 found_recipe = recipe
                 break
-        
+
         if not found_recipe:
-            logger.warning(f"Рецепт с идентификатором '{recipe_id}' не найден")
+            log_warning("Рецепт не найден", {"recipe_id": recipe_id})
             abort(404, description=f"Рецепт с идентификатором '{recipe_id}' не найден")
-        
-        # Преобразуем рецепт в JSON-совместимый формат
+
         converted_recipe = converter.convert(found_recipe)
-        
-        logger.info(f"Рецепт с идентификатором '{recipe_id}' успешно найден")
+
+        log_info("Рецепт успешно найден", {"recipe_id": recipe_id})
         return jsonify(converted_recipe)
-        
+
     except Exception as e:
-        logger.error(f"Ошибка при получении рецепта {recipe_id}: {str(e)}")
+        log_error("Ошибка при получении рецепта", e, {"recipe_id": recipe_id})
         abort(500, description=f"Ошибка при получении рецепта: {str(e)}")
+
+# Endpoints: справочники
 
 @app.route("/api/references", methods=['GET'])
 def get_references():
-    """
-    Получить список всех справочников в формате JSON.
-    
+    """ 
+    Возвращает набор всех справочников.
+
+    Логика:
+        - перебирает ключи репозитория
+        - исключает рецепты
+        - конвертирует элементы каждого справочника
+
     Возвращает:
-        JSON объект со всеми справочниками (кроме рецептов)
-        
-    Ошибки:
-        500: В случае внутренней ошибки сервера при получении справочников
+        flask.Response: JSON словарь {reference_name: [items]}.
+
+    Исключения:
+        500: При внутренней ошибке.
     """
-    logger.info("Запрос списка всех справочников")
+    log_info("Запрос списка всех справочников")
     try:
         references_data = {}
-        
-        # Собираем все справочники кроме рецептов
+
         for key, value in data.items():
-            if key != reposity.recipe_key():  # исключаем рецепты
-                # Преобразуем каждый элемент справочника
+            if key != reposity.recipe_key():
                 converted_items = []
                 for item_name, item in value.items():
                     converted_item = converter.convert(item)
                     converted_items.append(converted_item)
-                
+
                 references_data[key] = converted_items
-        
-        logger.info(f"Успешно возвращено {len(references_data)} справочников")
+
+        log_info("Успешно возвращено справочников", {"count": len(references_data)})
         return jsonify(references_data)
-        
+
     except Exception as e:
-        logger.error(f"Ошибка при получении справочников: {str(e)}")
+        log_error("Ошибка при получении справочников", e)
         abort(500, description=f"Ошибка при получении справочников: {str(e)}")
 
 @app.route("/api/references/<string:reference_name>", methods=['GET'])
 def get_reference(reference_name):
-    """
-    Получить конкретный справочник по имени в формате JSON.
-    
+    """ 
+    Возвращает справочник по имени.
+
     Аргументы:
-        reference_name (str): Название справочника
-        
+        reference_name (str): Имя справочника.
+
     Возвращает:
-        JSON объект с данными справочника
-        
-    Ошибки:
-        404: Если справочник с указанным именем не найден
-        500: В случае внутренней ошибки сервера
+        flask.Response: JSON объект {reference_name, items}.
+
+    Исключения:
+        404: Если справочник не найден.
+        500: При внутренней ошибке.
     """
-    logger.info(f"Запрос справочника: {reference_name}")
+    log_info("Запрос справочника", {"reference_name": reference_name})
     try:
-        # Проверяем существование справочника
         if reference_name not in data:
-            logger.warning(f"Справочник '{reference_name}' не найден")
+            log_warning("Справочник не найден", {"reference_name": reference_name})
             abort(404, description=f"Справочник '{reference_name}' не найден")
-        
+
         reference_data = data[reference_name]
-        
-        # Преобразуем все элементы справочника
+
         converted_items = []
         for item_name, item in reference_data.items():
             converted_item = converter.convert(item)
             converted_items.append(converted_item)
-        
-        logger.info(f"Справочник '{reference_name}' содержит {len(converted_items)} элементов")
+
+        log_info("Справочник содержит элементов", {
+            "reference_name": reference_name,
+            "count": len(converted_items)
+        })
+
         return jsonify({
             "reference_name": reference_name,
             "items": converted_items
         })
-        
+
     except Exception as e:
-        logger.error(f"Ошибка при получении справочника {reference_name}: {str(e)}")
+        log_error("Ошибка при получении справочника", e, {"reference_name": reference_name})
         abort(500, description=f"Ошибка при получении справочника: {str(e)}")
+
+# Endpoints: отчеты
 
 @app.route("/report/<code>/<start>/<end>", methods=['GET'])
 def get_report(code, start, end):
-    """
-    Сгенерировать отчет по складу за указанный период в CSV формате.
-    
+    """ 
+    Формирует отчет по складу за период.
+
     Аргументы:
-        code (str): Код или название склада
-        start (str): Дата начала периода в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС"
-        end (str): Дата окончания периода в формате "ГГГГ-ММ-ДД ЧЧ:ММ:СС"
+        code (str): Код/имя склада.
+        start (str): Дата начала периода в формате "%Y-%m-%d %H:%M:%S".
+        end (str): Дата окончания периода в формате "%Y-%m-%d %H:%M:%S".
+
+    Возвращает:
+        flask.Response | str: CSV-данные или текст ошибки формата входных дат/кода склада.
     """
-    logger.info(f"Запрос отчета для склада '{code}' за период {start} - {end}")
-    
-    # Создаем генератор CSV отчетов
+    log_info("Запрос отчета", {"storage_code": code, "start": start, "end": end})
+
     result_format = factory_entities().create("csv")()
     res = data[reposity.storage_key()]
     storage = None
-    
+
     try:
-        # Парсим даты из строкового формата
         start_date = datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
         finish_date = datetime.strptime(end, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        logger.error("Неправильный формат дат в запросе отчета")
+        log_error("Неправильный формат дат в запросе отчета")
         return "Неправильный формат дат! Используйте: ГГГГ-ММ-ДД ЧЧ:ММ:СС"
-    
-    # Ищем склад по коду или названию
+
     for key, item in res.items():
         if item.name == code:
             storage = item
             break
-            
+
     if storage is None:
-        logger.warning(f"Склад с кодом '{code}' не найден")
+        log_warning("Склад не найден для отчета", {"storage_code": code})
         return "Неправильный код склада!"
-    
-    # Передаем объект storage_model
+
     osv = data_service.create_osv(start_date, finish_date, storage)
-    
-    # Генерируем CSV отчет
     result = result_format.create(osv.rows)
-    
-    logger.info(f"Отчет для склада '{code}' успешно сгенерирован")
+
+    log_info("Отчет успешно сгенерирован", {"storage_code": code})
     return flask.Response(response=result, status=200, content_type="text/plain;charset=utf-8")
 
 @app.route("/api/dump", methods=['POST'])
 def get_dump():
-    """
-    Сохранить все данные из репозитория в JSON файл.
-    
-    Тело запроса (JSON, опционально):
-    {
-        "filename": "имя_файла.json"  # по умолчанию "data_dump.json"
-    }
-    
+    """ 
+    Создает JSON-дамп данных репозитория.
+
+    Тело запроса (опционально):
+        { "filename": "имя_файла.json" }
+
     Возвращает:
-        JSON ответ с результатом операции
-        
-    Ошибки:
-        500: В случае ошибки при выгрузке данных
+        flask.Response: JSON со статусом операции.
+
+    Исключения:
+        500: При ошибке выгрузки.
     """
     try:
-        # Получаем данные из тела запроса
         if flask.request.is_json:
             request_data = flask.request.get_json()
             filename = request_data.get('filename', 'data_dump.json')
         else:
-            # Если JSON не предоставлен, используем значение по умолчанию
             filename = 'data_dump.json'
-        
-        # Проверяем расширение файла
+
         if not filename.endswith('.json'):
             filename += '.json'
-        
-        logger.info(f"Запрос на выгрузку данных в файл: {filename}")
-        
-        # Используем метод dump из start_service для сохранения данных
+
+        log_info("Запрос на выгрузку данных", {"filename": filename})
+
         data_service.dump(filename)
-        
-        logger.info(f"Данные успешно выгружены в файл: {filename}")
-        
+
+        log_info("Данные успешно выгружены", {"filename": filename})
+
         return jsonify({
             "status": "success",
             "message": f"Данные успешно выгружены в файл: {filename}",
             "filename": filename
         }), 200
-        
+
     except Exception as e:
-        logger.error(f"Ошибка при выгрузке данных: {str(e)}")
+        log_error("Ошибка при выгрузке данных", e)
         return jsonify({
             "status": "error",
             "message": f"Ошибка при выгрузке данных: {str(e)}"
         }), 500
-    
+
+# Endpoints: фильтрация доменных моделей
+
 @app.route("/api/<string:domain_name>/filter", methods=['POST'])
 def filter_domain(domain_name):
-    """
-    Фильтрация доменных моделей по DTO фильтрации.
-    
+    """ 
+    Фильтрация и сортировка доменных сущностей.
+
+    Ожидает JSON тело запроса, совместимое с filter_sorting_dto.
+
     Аргументы:
-        domain_name: Название доменной модели для фильтрации. Допустимые значения:
-            - 'nomenclature' - номенклатура
-            - 'nomenclature_groups' - группы номенклатуры
-            - 'measure' - единицы измерения
-            - 'recipe' - рецепты  
+        domain_name (str): Имя доменной области:
+            - nomenclature
+            - group
+            - measure
+            - recipe
+
     Возвращает:
-        JSON: Отфильтрованный и отсортированный список объектов в формате DTO  
-    Ошибки:
-        400: Если запрос не содержит JSON или указан неизвестный тип доменной модели
-        404: Если указан неизвестный тип доменной модели
-        500: При внутренних ошибках обработки
+        flask.Response: JSON список отфильтрованных объектов.
+
+    Исключения:
+        400: Если тело запроса не JSON.
+        404: Если domain_name не поддерживается.
     """
     if not flask.request.is_json:
         abort(400, description="Ожидается JSON в теле запроса")
 
     request_data = flask.request.get_json()
-
-    # Разбираем DTO фильтрации
     fs_dto = filter_sorting_dto().create(request_data)
 
-    # Маппинг типа в ключ репозитория
     repo_key_map = {
         "nomenclature": reposity.nomenclature_key(),
         "group": reposity.nomenclature_group_key(),
@@ -380,46 +468,48 @@ def filter_domain(domain_name):
     }
 
     if domain_name not in repo_key_map:
+        log_warning("Неизвестный тип доменной модели для фильтрации", {"domain_name": domain_name})
         abort(404, description=f"Неизвестный тип доменной модели: {domain_name}")
 
     repo_key = repo_key_map[domain_name]
     domain_dict = data.get(repo_key, {})
 
     items = list(domain_dict.values())
-
-    # Оборачиваем в прототип
     proto = prototype_report(items)
 
-    # Последовательно применяем все фильтры
     for filter in fs_dto.filters:
         proto = prototype_report.filter(proto, filter)
 
     result_items = proto.data
 
-    # Сортировка
     for sort_field in reversed(fs_dto.sorting):
         result_items.sort(
             key=lambda obj: prototype.get_nested_value(obj, sort_field) or ""
         )
 
-    # Конвертируем в JSON через convert_factory
     converter = convert_factory()
     result = converter.convert_list(result_items)
+
+    log_info("Фильтрация выполнена", {"domain_name": domain_name, "count": len(result_items)})
 
     return jsonify(result)
 
 @app.route("/report/<storage_code>/<start_str>/<end_str>", methods=['POST'])
 def get_osv_filtered(storage_code, start_str, end_str):
-    """
-    Формирование ОСВ (Оборотно-сальдовой ведомости) с учетом DTO фильтрации.
-    
+    """ 
+    Формирует ОСВ с фильтрацией строк по правилам из filter_sorting_dto.
+
+    Аргументы:
+        storage_code (str): Код/имя склада.
+        start_str (str): Дата начала периода.
+        end_str (str): Дата окончания периода.
+
     Возвращает:
-        JSON: ОСВ в формате CSV с отфильтрованными и отсортированными данными
-        
-    Ошибки:
-        400: Если запрос не содержит JSON или отсутствуют обязательные параметры
-        404: Если склад не найден
-        500: При внутренних ошибках формирования отчета
+        flask.Response: CSV файл отчета.
+
+    Исключения:
+        400: Некорректные параметры/формат дат/отсутствие JSON.
+        404: Если склад не найден.
     """
     if not flask.request.is_json:
         abort(400, description="Ожидается JSON в теле запроса")
@@ -435,7 +525,6 @@ def get_osv_filtered(storage_code, start_str, end_str):
     except ValueError:
         abort(400, description="Неверный формат дат. Ожидается: ГГГГ-ММ-ДД ЧЧ:ММ:СС")
 
-    # Ищем склад по имени (как в GET /report/...)
     storages = data[reposity.storage_key()]
     storage = None
     for item in storages.values():
@@ -444,14 +533,12 @@ def get_osv_filtered(storage_code, start_str, end_str):
             break
 
     if storage is None:
+        log_warning("Склад не найден для ОСВ", {"storage_code": storage_code})
         abort(404, description="Склад не найден")
 
-    # Создаем ОСВ через существующий сервис
     osv_build = data_service.create_osv(start_date, end_date, storage)
-
     rows = osv_build.rows
 
-    # DTO фильтрации
     fs_dto = filter_sorting_dto().create(req)
 
     proto = prototype_report(rows)
@@ -460,35 +547,38 @@ def get_osv_filtered(storage_code, start_str, end_str):
 
     filtered_rows = proto.data
 
-    # Формируем модель ОСВ с отфильтрованными строками
     osv = osv_model.create(start_date, end_date, storage)
     osv.rows = filtered_rows
 
     result_format = factory_entities().create("csv")()
     osv_dto_dict = result_format.create(osv.rows)
 
-    return  flask.Response(
+    log_info("ОСВ сформирована с фильтрацией", {"storage_code": storage_code, "rows": len(filtered_rows)})
+
+    return flask.Response(
         response=osv_dto_dict,
         status=200,
         content_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": "attachment;filename=report.csv"}
     )
 
+# Endpoints: настройки (дата блокировки)
+
 @app.route("/api/settings/block-date", methods=['POST'])
 def set_block_date():
-    """
-    Установить или изменить дату блокировки (block_date) в настройках.
+    """ 
+    Устанавливает или сбрасывает дату блокировки.
 
-    Тело запроса (JSON):
-    {
-        "block_date": "ГГГГ-ММ-ДД ЧЧ:ММ:СС" | null
-    }
+    Ожидаемый JSON:
+        { "block_date": "YYYY-MM-DD HH:MM:SS" }
+    Для сброса:
+        { "block_date": null } или пустое значение.
 
-    Логика:
-        - Если block_date = null или отсутствует — дата блокировки сбрасывается (None),
-          кэш очищается, данные и настройки сохраняются.
-        - Если указана строка — парсим в datetime, устанавливаем в start_service.block_date
-          (пересчитывается кэш), сохраняем данные (dump) и обновляем settings.json.
+    Возвращает:
+        flask.Response: JSON со статусом и установленной датой.
+
+    Исключения:
+        400: Неверный формат или отсутствие JSON.
     """
     if not flask.request.is_json:
         abort(400, description="Ожидается JSON в теле запроса")
@@ -496,18 +586,14 @@ def set_block_date():
     req = flask.request.get_json()
     block_date_str = req.get("block_date", None)
 
-    # Сброс даты блокировки
     if block_date_str in (None, "", "null"):
-        logger.info("Сброс даты блокировки (block_date = None)")
+        log_info("Сброс даты блокировки (block_date = None)")
 
-        # Обновляем сервис
         data_service.block_date = None
 
-        # Обновляем настройки
         settings_mgr.settings.block_date = None
         settings_mgr.save_settings()
 
-        # Сохраняем текущие данные (без кэша)
         data_service.save_data()
 
         return jsonify({
@@ -515,23 +601,19 @@ def set_block_date():
             "block_date": None
         }), 200
 
-    # Установка новой даты блокировки
     try:
         new_block_date = datetime.strptime(block_date_str, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        logger.error(f"Неверный формат даты блокировки: {block_date_str}")
+        log_error("Неверный формат даты блокировки", data={"block_date": block_date_str})
         abort(400, description="Неверный формат даты. Ожидается: ГГГГ-ММ-ДД ЧЧ:ММ:СС")
 
-    logger.info(f"Установка новой даты блокировки: {block_date_str}")
+    log_info("Установка новой даты блокировки", {"block_date": block_date_str})
 
-    # 1. Обновляем сервис (пересчёт кэша остатков)
     data_service.block_date = new_block_date
 
-    # 2. Обновляем настройки
     settings_mgr.settings.block_date = new_block_date
     settings_mgr.save_settings()
 
-    # 3. Автоматически сохраняем все данные (включая кэш) в data_dump / app_data.json
     data_service.save_data()
 
     return jsonify({
@@ -541,11 +623,11 @@ def set_block_date():
 
 @app.route("/api/settings/block-date", methods=['GET'])
 def get_block_date():
-    """
-    Получить текущую дату блокировки (block_date) из сервиса.
+    """ 
+    Возвращает текущую дату блокировки.
 
     Возвращает:
-        { "block_date": "ГГГГ-ММ-ДД ЧЧ:ММ:СС" | null }
+        flask.Response: JSON вида { "block_date": "YYYY-MM-DD HH:MM:SS" | None }.
     """
     block_date = getattr(data_service, "block_date", None)
 
@@ -554,46 +636,52 @@ def get_block_date():
     else:
         block_date_str = None
 
-    logger.info(f"Текущая дата блокировки: {block_date_str}")
+    log_info("Запрос текущей даты блокировки", {"block_date": block_date_str})
 
     return jsonify({
         "block_date": block_date_str
     }), 200
 
+# Endpoints: остатки
+
 @app.route("/api/balances/<string:date_str>", methods=['GET'])
 @app.route("/api/balances/<string:date_str>/<string:storage_code>", methods=['GET'])
 def get_balances_on_date(date_str, storage_code=None):
-    """
-    Получить остатки на указанную дату.
+    """ 
+    Возвращает остатки номенклатуры на указанную дату.
 
-    Параметры:
-        /api/balances/<date_str>
-        /api/balances/<date_str>/<storage_code>
+    Аргументы:
+        date_str (str): Дата в формате "%Y-%m-%d %H:%M:%S".
+        storage_code (str, optional): Код/имя склада для ограничения выборки.
 
-    Где:
-        date_str: "ГГГГ-ММ-ДД ЧЧ:ММ:СС"
-        storage_code: имя или unique_code склада
+    Логика:
+        - фильтрует транзакции по дате
+        - учитывает базовые единицы измерения и коэффициенты пересчета
+        - агрегирует остатки по складу и номенклатуре
 
-    Примеры:
-        GET /api/balances/2025-10-25 00:00:00
-        GET /api/balances/2025-10-25 00:00:00/Основной склад
+    Возвращает:
+        flask.Response: JSON список остатков.
+
+    Исключения:
+        400: Неверный формат даты.
+        404: Если склад по storage_code не найден.
+        500: Если отсутствуют транзакции или внутренняя ошибка.
     """
     try:
         target_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
     except ValueError:
         abort(400, description="Неверный формат даты. Ожидается: ГГГГ-ММ-ДД ЧЧ:ММ:СС")
 
-    logger.info(f"Запрос остатков на дату {date_str} (storage={storage_code})")
+    log_info("Запрос остатков на дату", {"date": date_str, "storage": storage_code})
 
-    # Данные из глобального репозитория
     transactions_data = data.get(reposity.transaction_key(), {})
     storages_data = data.get(reposity.storage_key(), {})
     nomenclatures_data = data.get(reposity.nomenclature_key(), {})
 
     if not transactions_data:
+        log_error("В репозитории отсутствуют транзакции")
         abort(500, description="В репозитории отсутствуют транзакции")
 
-    # Фильтрация складов по storage_code
     allowed_storages = list(storages_data.values())
     if storage_code:
         allowed_storages = [
@@ -601,14 +689,14 @@ def get_balances_on_date(date_str, storage_code=None):
             if s.name == storage_code or getattr(s, "unique_code", None) == storage_code
         ]
         if not allowed_storages:
+            log_warning("Склад не найден по storage_code", {"storage_code": storage_code})
             abort(404, description="Склад не найден по параметру storage_code")
+
     allowed_storage_ids = {s.unique_code for s in allowed_storages}
 
-    # Агрегируем остатки по ключу (storage_id, nomenclature_id)
     balances_by_key: dict[tuple[str, str], balance_model] = {}
 
     for tr in transactions_data.values():
-        # Берём только транзакции, которые произошли не позже целевой даты
         if tr.date > target_date:
             continue
 
@@ -617,13 +705,10 @@ def get_balances_on_date(date_str, storage_code=None):
             continue
 
         nomenclature = tr.nomenclature
-
-        # Базовая единица измерения для номенклатуры
         base_measure = nomenclature.measure.base_measure or nomenclature.measure
 
         quantity = tr.quantity
 
-        # Конвертация количества в базовую единицу измерения
         if tr.measure.base_measure and tr.measure.base_measure == base_measure:
             quantity *= tr.measure.conversion_factor
 
@@ -661,28 +746,30 @@ def get_balances_on_date(date_str, storage_code=None):
             for b in balance_list
         ]
 
-    logger.info(f"Найдено {len(balance_list)} остатков на дату {date_str}")
+    log_info("Найдено остатков на дату", {"count": len(balance_list), "date": date_str})
 
     return jsonify(result), 200
 
+# Endpoints: операции со справочниками (CRUD)
+
 @app.route("/api/<string:reference_type>", methods=['GET'])
 def get_reference_item(reference_type):
-    """
-    Получить один элемент справочника по уникальному коду.
+    """ 
+    Возвращает один элемент справочника по unique_code.
+
+    Параметры строки запроса:
+        unique_code (str): Уникальный код элемента.
 
     Аргументы:
-        reference_type (str): Тип справочника (nomenclature, measure, nomenclature_group, storage)
-
-    Query параметры:
-        unique_code (str): Уникальный код элемента
+        reference_type (str): Тип справочника.
 
     Возвращает:
-        JSON объект с данными элемента справочника
+        flask.Response: JSON объект элемента.
 
-    Ошибки:
-        400: Если не указан unique_code
-        404: Если элемент не найден
-        500: В случае внутренней ошибки сервера
+    Исключения:
+        400: Некорректные аргументы.
+        404: Элемент не найден.
+        500: Внутренняя ошибка.
     """
     try:
         unique_code = flask.request.args.get('unique_code')
@@ -690,94 +777,98 @@ def get_reference_item(reference_type):
         if not unique_code:
             abort(400, description="Параметр unique_code обязателен")
 
-        logger.info(f"Запрос элемента справочника {reference_type} с кодом {unique_code}")
+        log_info("Запрос элемента справочника", {
+            "reference_type": reference_type,
+            "unique_code": unique_code
+        })
 
         item = ref_service.get_one(reference_type, unique_code)
 
         if not item:
+            log_warning("Элемент справочника не найден", {
+                "reference_type": reference_type,
+                "unique_code": unique_code
+            })
             abort(404, description=f"Элемент с кодом '{unique_code}' не найден в справочнике '{reference_type}'")
 
-        # Преобразуем элемент в JSON
         converted_item = converter.convert(item)
 
-        logger.info(f"Элемент справочника {reference_type} с кодом {unique_code} успешно найден")
+        log_info("Элемент справочника найден", {
+            "reference_type": reference_type,
+            "unique_code": unique_code
+        })
+
         return jsonify(converted_item), 200
 
     except argument_exception as e:
-        logger.error(f"Ошибка при получении элемента справочника: {str(e)}")
+        log_error("Ошибка при получении элемента справочника", e)
         abort(400, description=str(e))
     except Exception as e:
-        logger.error(f"Ошибка при получении элемента справочника: {str(e)}")
+        log_error("Ошибка при получении элемента справочника", e)
         abort(500, description=f"Ошибка при получении элемента справочника: {str(e)}")
 
 @app.route("/api/<string:reference_type>", methods=['PUT'])
 def add_reference_item(reference_type):
-    """
-    Добавить новый элемент в справочник.
+    """ 
+    Добавляет новый элемент в указанный справочник.
+
+    Ожидает JSON тело, совместимое с моделью справочника.
 
     Аргументы:
-        reference_type (str): Тип справочника (nomenclature, measure, nomenclature_group, storage)
-
-    Тело запроса (JSON):
-        Объект с данными нового элемента справочника
+        reference_type (str): Тип справочника.
 
     Возвращает:
-        JSON объект с данными добавленного элемента
+        flask.Response: JSON объект созданного элемента, статус 201.
 
-    Ошибки:
-        400: Если запрос не содержит JSON или данные некорректны
-        500: В случае внутренней ошибки сервера
+    Исключения:
+        400: Некорректные аргументы/тело запроса.
+        500: Внутренняя ошибка.
     """
     try:
         if not flask.request.is_json:
             abort(400, description="Ожидается JSON в теле запроса")
 
         request_data = flask.request.get_json()
-        logger.info(f"Запрос на добавление элемента в справочник {reference_type}")
 
-        # Конвертируем JSON обратно в объект модели
+        log_info("Запрос на добавление элемента справочника", {"reference_type": reference_type})
+
         item = converter.convert({reference_type: [request_data]})[reference_type][0]
 
-        # Добавляем элемент через сервис
         added_item = ref_service.add(reference_type, item)
 
-        # Преобразуем элемент в JSON
         converted_item = converter.convert(added_item)
 
-        logger.info(f"Элемент успешно добавлен в справочник {reference_type}")
+        log_info("Элемент успешно добавлен", {"reference_type": reference_type})
+
         return jsonify(converted_item), 201
 
     except argument_exception as e:
-        logger.error(f"Ошибка при добавлении элемента: {str(e)}")
+        log_error("Ошибка при добавлении элемента справочника", e)
         abort(400, description=str(e))
     except Exception as e:
-        logger.error(f"Ошибка при добавлении элемента: {str(e)}")
+        log_error("Ошибка при добавлении элемента справочника", e)
         abort(500, description=f"Ошибка при добавлении элемента: {str(e)}")
 
 @app.route("/api/<string:reference_type>", methods=['PATCH'])
 def update_reference_item(reference_type):
-    """
-    Обновить элемент справочника.
+    """ 
+    Обновляет существующий элемент справочника.
 
-    Аргументы:
-        reference_type (str): Тип справочника (nomenclature, measure, nomenclature_group, storage)
-
-    Тело запроса (JSON):
+    Ожидаемый JSON:
         {
-            "unique_code": "код элемента",
-            "changes": {
-                "field1": "new_value1",
-                "field2": "new_value2"
-            }
+            "unique_code": "...",
+            "changes": { ... }
         }
 
-    Возвращает:
-        JSON объект с данными обновленного элемента
+    Аргументы:
+        reference_type (str): Тип справочника.
 
-    Ошибки:
-        400: Если запрос не содержит JSON или данные некорректны
-        404: Если элемент не найден
-        500: В случае внутренней ошибки сервера
+    Возвращает:
+        flask.Response: JSON обновленного элемента.
+
+    Исключения:
+        400: Некорректные аргументы/тело запроса.
+        500: Внутренняя ошибка.
     """
     try:
         if not flask.request.is_json:
@@ -793,42 +884,46 @@ def update_reference_item(reference_type):
         if not changes:
             abort(400, description="Параметр changes обязателен")
 
-        logger.info(f"Запрос на обновление элемента {unique_code} в справочнике {reference_type}")
+        log_info("Запрос на обновление элемента справочника", {
+            "reference_type": reference_type,
+            "unique_code": unique_code
+        })
 
-        # Обновляем элемент через сервис
         updated_item = ref_service.update(reference_type, unique_code, changes)
 
-        # Преобразуем элемент в JSON
         converted_item = converter.convert(updated_item)
 
-        logger.info(f"Элемент {unique_code} успешно обновлен в справочнике {reference_type}")
+        log_info("Элемент успешно обновлен", {
+            "reference_type": reference_type,
+            "unique_code": unique_code
+        })
+
         return jsonify(converted_item), 200
 
     except argument_exception as e:
-        logger.error(f"Ошибка при обновлении элемента: {str(e)}")
+        log_error("Ошибка при обновлении элемента справочника", e)
         abort(400, description=str(e))
     except Exception as e:
-        logger.error(f"Ошибка при обновлении элемента: {str(e)}")
+        log_error("Ошибка при обновлении элемента справочника", e)
         abort(500, description=f"Ошибка при обновлении элемента: {str(e)}")
 
 @app.route("/api/<string:reference_type>", methods=['DELETE'])
 def delete_reference_item(reference_type):
-    """
-    Удалить элемент из справочника.
+    """ 
+    Удаляет элемент справочника по unique_code.
+
+    Параметры строки запроса:
+        unique_code (str): Уникальный код элемента.
 
     Аргументы:
-        reference_type (str): Тип справочника (nomenclature, measure, nomenclature_group, storage)
-
-    Query параметры:
-        unique_code (str): Уникальный код элемента
+        reference_type (str): Тип справочника.
 
     Возвращает:
-        JSON с результатом операции
+        flask.Response: JSON статус операции.
 
-    Ошибки:
-        400: Если не указан unique_code или элемент используется в других объектах
-        404: Если элемент не найден
-        500: В случае внутренней ошибки сервера
+    Исключения:
+        400: Некорректные аргументы.
+        500: Внутренняя ошибка.
     """
     try:
         unique_code = flask.request.args.get('unique_code')
@@ -836,80 +931,100 @@ def delete_reference_item(reference_type):
         if not unique_code:
             abort(400, description="Параметр unique_code обязателен")
 
-        logger.info(f"Запрос на удаление элемента {unique_code} из справочника {reference_type}")
+        log_info("Запрос на удаление элемента справочника", {
+            "reference_type": reference_type,
+            "unique_code": unique_code
+        })
 
-        # Удаляем элемент через сервис
         result = ref_service.delete(reference_type, unique_code)
 
-        logger.info(f"Элемент {unique_code} успешно удален из справочника {reference_type}")
+        log_info("Элемент успешно удален", {
+            "reference_type": reference_type,
+            "unique_code": unique_code
+        })
+
         return jsonify({
             "status": "success",
             "message": f"Элемент с кодом '{unique_code}' успешно удален из справочника '{reference_type}'"
         }), 200
 
     except argument_exception as e:
-        logger.error(f"Ошибка при удалении элемента: {str(e)}")
+        log_error("Ошибка при удалении элемента справочника", e)
         return jsonify({
             "status": "error",
             "message": f"Ошибка при удалении элемента: {str(e)}"
         }), 400
     except Exception as e:
-        logger.error(f"Ошибка при удалении элемента: {str(e)}")
+        log_error("Ошибка при удалении элемента справочника", e)
         return jsonify({
             "status": "error",
             "message": f"Ошибка при удалении элемента: {str(e)}"
         }), 500
 
+# Глобальные обработчики ошибок
+
 @app.errorhandler(404)
 def page_not_found(error):
-    """
-    Обработчик ошибки 404 - Ресурс не найден.
-    
+    """ 
+    Обработчик ошибки 404.
+
     Аргументы:
-        error: Объект ошибки
-        
+        error: объект ошибки Flask.
+
     Возвращает:
-        JSON ответ с описанием ошибки
+        flask.Response: JSON описание ошибки.
     """
-    logger.error(f"Ошибка 404: {error}")
+    log_error("Ошибка 404", data={"error": str(error)})
     return jsonify({
-        "error": "Запрашиваемый ресурс не найден.", 
+        "error": "Запрашиваемый ресурс не найден.",
         "status": 404
     }), 404
 
+
 @app.errorhandler(500)
 def internal_server_error(error):
-    """
-    Обработчик ошибки 500 - Внутренняя ошибка сервера.
-    
+    """ 
+    Обработчик ошибки 500.
+
     Аргументы:
-        error: Объект ошибки
-        
+        error: объект ошибки Flask.
+
     Возвращает:
-        JSON ответ с описанием ошибки
+        flask.Response: JSON описание внутренней ошибки сервера.
     """
-    logger.error(f"Ошибка 500: {error}")
+    log_error("Ошибка 500", data={"error": str(error)})
     return jsonify({
-        "error": f"Внутренняя ошибка сервера: {str(error)}", 
+        "error": f"Внутренняя ошибка сервера: {str(error)}",
         "status": 500
     }), 500
 
+# Точка входа приложения
+
 if __name__ == '__main__':
-    """
-    Точка входа приложения.
-    Запускает сервис данных и Flask сервер.
-    """
+
     # Запускаем сервис данных и получаем данные репозитория
     data_service.start()
     data = data_service.repo.data
+
+    # Загружаем настройки
     settings_mgr = settings_manager("settings.json")
     settings_mgr.load_settings()
     data_service.block_date = settings_mgr.settings.block_date
 
+    # Подключаем observer-логгер
+    if observe_logger is not None:
+        try:
+            observe_logger(settings_mgr.settings)
+            log_info("Observer logger initialized from settings.")
+        except Exception as e:
+            # ЭТОТ ПРИНТ ДЛЯ ПОКАЗА ОШИБКИ ИНИЦИАЛИЗАЦИИ ЛОГГЕРА!
+            # нужно, чтобы показало, что логгер не работает, но работа сервиса не останавливается
+            print(f"Logger init error: {e}")
+
     # Инициализируем сервис справочников
     ref_service = reference_service(data_service.repo, data_service, settings_mgr)
 
-    logger.info("Сервис запущен на 0.0.0.0:8080")
+    log_info("Сервис запущен", {"host": "0.0.0.0", "port": 8080})
 
     # Запускаем Flask приложение
     app.run(host="0.0.0.0", port=8080)

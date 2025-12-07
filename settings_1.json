@@ -9,5 +9,8 @@
   },
   "response_format": "json",
   "first_start": true,
-  "block_date": "2026-12-30"
+  "block_date": "2026-12-30",
+  "min_log_level": "INFO",
+  "log_to_file": true,
+  "log_file_path": "log1.txt"
 }

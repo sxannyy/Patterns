@@ -26,7 +26,7 @@ class settings_manager:
 
     __config_namefile: str = "settings.json"  # Путь к файлу конфигурации.
     __settings: settings_model = None  # Объект settings_model, хранящий конфигурацию.
-    __global_attributes: list = ["company", "response_format", "first_start", "block_date"]  # Список глобальных атрибутов settings_model.
+    __global_attributes: list = ["company", "response_format", "first_start", "block_date", "min_log_level", "log_to_file", "log_file_path"]  # Список глобальных атрибутов settings_model.
     __settings_dict: list = ["company"] # Список атрибутов settings_model, которые нужно конвертировать из словаря
 
     def __init__(self, config_filename: str):

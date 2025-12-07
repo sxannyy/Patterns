@@ -1,0 +1,30 @@
+
+=== Logging started at 2025-12-07T21:40:10.147529 ===
+[2025-12-07T21:40:17.557385] ERROR: Ошибка 404 | data={'error': '404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'}
+[2025-12-07T21:40:33.466566] ERROR: Ошибка 404 | data={'error': '404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'}
+[2025-12-07T21:40:39.469893] ERROR: Ошибка при получении справочника | data={'reference_name': 'keys'} | exception=404 Not Found: Справочник 'keys' не найден
+[2025-12-07T21:40:39.470446] ERROR: Ошибка 500 | data={'error': "500 Internal Server Error: Ошибка при получении справочника: 404 Not Found: Справочник 'keys' не найден"}
+[2025-12-07T21:40:39.496771] ERROR: Ошибка 404 | data={'error': '404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'}
+[2025-12-07T21:40:42.751627] ERROR: Ошибка 404 | data={'error': '404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'}
+
+=== Logging started at 2025-12-07T21:41:06.046433 ===
+[2025-12-07T21:41:06.046500] INFO: Observer logger initialized from settings.
+[2025-12-07T21:41:06.046552] INFO: Сервис запущен | data={'host': '0.0.0.0', 'port': 8080}
+[2025-12-07T21:41:08.834151] INFO: Обработка корневого запроса
+[2025-12-07T21:41:08.853933] ERROR: Ошибка 404 | data={'error': '404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'}
+[2025-12-07T21:41:14.651751] INFO: Запрос ответа в формате | data={'type': 'markdown'}
+[2025-12-07T21:41:14.652194] INFO: Ответ успешно сгенерирован | data={'type': 'markdown'}
+[2025-12-07T21:41:18.875632] INFO: Запрос остатков на дату | data={'date': '2025-10-25 00:00:00', 'storage': 'Основной склад'}
+[2025-12-07T21:41:18.875905] INFO: Найдено остатков на дату | data={'count': 1, 'date': '2025-10-25 00:00:00'}
+[2025-12-07T21:41:18.905330] ERROR: Ошибка 404 | data={'error': '404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'}
+[2025-12-07T21:41:22.514946] INFO: Запрос справочника | data={'reference_name': 'nomenclature'}
+[2025-12-07T21:41:22.515206] INFO: Справочник содержит элементов | data={'reference_name': 'nomenclature', 'count': 8}
+[2025-12-07T21:41:22.543650] ERROR: Ошибка 404 | data={'error': '404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'}
+[2025-12-07T21:41:34.279434] ERROR: Ошибка при получении элемента справочника | exception=400 Bad Request: Параметр unique_code обязателен
+[2025-12-07T21:41:34.279584] ERROR: Ошибка 500 | data={'error': '500 Internal Server Error: Ошибка при получении элемента справочника: 400 Bad Request: Параметр unique_code обязателен'}
+[2025-12-07T21:41:34.287927] ERROR: Ошибка 404 | data={'error': '404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'}
+[2025-12-07T21:41:42.698350] ERROR: Ошибка при получении элемента справочника | exception=400 Bad Request: Параметр unique_code обязателен
+[2025-12-07T21:41:42.698512] ERROR: Ошибка 500 | data={'error': '500 Internal Server Error: Ошибка при получении элемента справочника: 400 Bad Request: Параметр unique_code обязателен'}
+[2025-12-07T21:41:42.726917] ERROR: Ошибка 404 | data={'error': '404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'}
+[2025-12-07T21:41:59.052576] INFO: Запрос текущей даты блокировки | data={'block_date': '2026-12-30 00:00:00'}
+[2025-12-07T21:41:59.065607] ERROR: Ошибка 404 | data={'error': '404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'}

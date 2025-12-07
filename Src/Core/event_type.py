@@ -29,6 +29,26 @@ class event_type:
     def change_reference() -> str:
         return "change_reference"
 
+    """ Событие - вывод информации через логгер """
+    @staticmethod
+    def info_log() -> str:
+        return "info_log"
+    
+    """ Событие - вывод предупреждения через логгер """
+    @staticmethod
+    def warning_log() -> str:
+        return "warning_log"
+    
+    """ Событие - вывод дебага через логгер """
+    @staticmethod
+    def debug_log() -> str:
+        return "debug_log"
+    
+    """ Событие - вывод ошибки через логгер """
+    @staticmethod
+    def error_log() -> str:
+        return "error_log"
+
     """ Получить список всех событий """
     @staticmethod
     def events() -> list:
