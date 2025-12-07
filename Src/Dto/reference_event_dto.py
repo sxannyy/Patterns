@@ -9,7 +9,7 @@ DTO для передачи параметров событий справочн
 class reference_event_dto(abstract_dto):
     __action: str = ""
     __reference_type: str = ""
-    __unique_code: Any[str] = None
+    __unique_code: Any = None
     __item: Any = None
     __old_item: Any = None
     __changes: Dict[str, Any] = {}
@@ -31,11 +31,11 @@ class reference_event_dto(abstract_dto):
         self.__reference_type = value
 
     @property
-    def unique_code(self) -> Any[str]:
+    def unique_code(self) -> Any:
         return self.__unique_code
 
     @unique_code.setter
-    def unique_code(self, value: Any[str]):
+    def unique_code(self, value: Any):
         self.__unique_code = value
 
     @property
