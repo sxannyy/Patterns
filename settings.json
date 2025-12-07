@@ -1,13 +1,16 @@
 {
   "company": {
     "name": "Название компании",
-    "type_of_property": "",
+    "type_of_property": "OOAAO",
     "inn": 0,
     "bank_account": 0,
     "correspondent_account": 0,
     "bik": 0
   },
-  "response_format": "",
+  "response_format": "json",
   "first_start": false,
-  "block_date": null
+  "block_date": "2026-12-30",
+  "min_log_level": "INFO",
+  "log_to_file": true,
+  "log_file_path": "log.txt"
 }
